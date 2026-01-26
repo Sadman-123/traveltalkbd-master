@@ -14,6 +14,18 @@ class _MobileHomeState extends State<MobileHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+    ),
+  ),
         title: Text("Travel Talk BD"),
       ),
       body: IndexedStack(

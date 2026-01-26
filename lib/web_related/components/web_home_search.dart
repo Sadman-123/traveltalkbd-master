@@ -249,76 +249,92 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
                     children: [
                       // Toggle Button
                       Container(
-                        margin: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _isTourPackages = true;
-                                    _filterResults(_searchController.text);
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 18),
-                                  decoration: BoxDecoration(
-                                    color: _isTourPackages
-                                        ? Colors.blue[600]
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Text(
-                                    'Tour Packages',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: _isTourPackages
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _isTourPackages = false;
-                                    _filterResults(_searchController.text);
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 18),
-                                  decoration: BoxDecoration(
-                                    color: !_isTourPackages
-                                        ? Colors.blue[600]
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  child: Text(
-                                    'Visa',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: !_isTourPackages
-                                          ? Colors.white
-                                          : Colors.black87,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+  margin: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: Colors.grey[200],
+    borderRadius: BorderRadius.circular(18),
+  ),
+  child: Row(
+    children: [
+      /// TOUR PACKAGES
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _isTourPackages = true;
+              _filterResults(_searchController.text);
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              gradient: _isTourPackages
+                  ? const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xFF4A1E6A), // purple
+                        Color(0xFFE10098), // pink
+                      ],
+                    )
+                  : null,
+              color: !_isTourPackages ? Colors.transparent : null,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(
+              'Tour Packages',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _isTourPackages ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      /// VISA
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _isTourPackages = false;
+              _filterResults(_searchController.text);
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              gradient: !_isTourPackages
+                  ? const LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xFF4A1E6A), // purple
+                        Color(0xFFE10098), // pink
+                      ],
+                    )
+                  : null,
+              color: _isTourPackages ? Colors.transparent : null,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(
+              'Visa',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: !_isTourPackages ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+
                       // Search Field
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -587,8 +603,13 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
                       height: 200,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.orange[600]!, Colors.red[600]!],
-                        ),
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
                       ),
                       child: const Center(
                         child: Icon(Icons.error, color: Colors.white, size: 48),
@@ -601,8 +622,13 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
                   height: 200,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.orange[600]!, Colors.red[600]!],
-                    ),
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
                   ),
                   child: const Center(
                     child: Icon(Icons.image, color: Colors.white, size: 48),
@@ -616,8 +642,13 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.orange[600]!, Colors.red[600]!],
-          ),
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
