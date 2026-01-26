@@ -66,7 +66,7 @@ class _WebHomeState extends State<WebHome> {
           //     fontSize: 24,
           //   ),
           // ),
-          child: Image.asset('lol000.png',height: 150,width: 150,),
+          child: Image.asset('assets/logo.png',height: 150,width: 150,),
         ),
         elevation: 0,
         actions: [

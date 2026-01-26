@@ -74,13 +74,6 @@ class Traveltalktheme {
           ),
         ),
 
-        // Bottom Navigation
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          backgroundColor: AppColors.background,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.secondary,
-          showUnselectedLabels: true,
-        ),
       );
   }
 }

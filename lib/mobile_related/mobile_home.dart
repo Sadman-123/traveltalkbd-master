@@ -26,7 +26,7 @@ class _MobileHomeState extends State<MobileHome> {
       ),
     ),
   ),
-        title: Text("Travel Talk BD"),
+        title: Image.asset('assets/logo.png',height: 135,width: 135,),
       ),
       body: IndexedStack(
         index: ind,
@@ -37,17 +37,46 @@ class _MobileHomeState extends State<MobileHome> {
           MobileHomeAbout()
         ],
       ),
-      bottomNavigationBar: NavigationBar(selectedIndex: ind,onDestinationSelected: (value) {
-        setState(() {
-          ind=value;
-        });
-      },destinations: [
-        NavigationDestination(icon: Icon(Icons.home), label: "Home"),
-        NavigationDestination(icon: Icon(Icons.place_outlined), label: "Destinition"),
-        NavigationDestination(icon: Icon(Icons.wallet_giftcard_outlined), label: "Packages"),
-        NavigationDestination(icon: Icon(Icons.info_outline_rounded), label: "About us"),
-
-      ]),
+     bottomNavigationBar: Container(
+  decoration: const BoxDecoration(
+    gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+  ),
+  child: NavigationBar(
+    backgroundColor: Colors.transparent, // IMPORTANT
+    elevation: 0,
+    selectedIndex: ind,
+    onDestinationSelected: (value) {
+      setState(() {
+        ind = value;
+      });
+    },
+    destinations: const [
+      NavigationDestination(
+        icon: Icon(Icons.home),
+        label: "Home",
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.place_outlined),
+        label: "Destination",
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.wallet_giftcard_outlined),
+        label: "Packages",
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.info_outline_rounded),
+        label: "About us",
+      ),
+    ],
+  ),
+),
     );
   }
 }

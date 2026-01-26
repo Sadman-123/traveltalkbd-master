@@ -81,7 +81,7 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
           final nextIndex = (_currentBannerIndex + 1) % _banners.length;
           _bannerPageController.animateToPage(
             nextIndex,
-            duration: const Duration(milliseconds: 500),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
         }

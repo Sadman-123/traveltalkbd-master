@@ -62,7 +62,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       ),
     ),
   ),
-        title: const Text('Travel Talk BD - Admin Panel'),
+        title: Image.asset('assets/logo.png',height: 150,width: 150,),
         bottom: TabBar(
           labelColor: Colors.white,
           unselectedLabelColor: Colors.black,
