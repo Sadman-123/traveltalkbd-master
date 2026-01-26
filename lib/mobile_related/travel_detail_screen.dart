@@ -40,9 +40,21 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
+         flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+    ),
+  ),
         title: Text(
           widget.item.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold,color: Colors.black),
         ),
         elevation: 0,
       ),

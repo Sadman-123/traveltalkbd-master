@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:traveltalkbd/web_related/components/web_home_search.dart';
 import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
 import 'package:traveltalkbd/web_related/components/web_home_packages.dart';
-import 'package:traveltalkbd/web_related/components/web_home_about.dart';
+import 'package:traveltalkbd/web_related/components/web_about_us_page.dart';
 
 class WebHome extends StatefulWidget {
   @override
@@ -14,7 +14,6 @@ class _WebHomeState extends State<WebHome> {
   final GlobalKey _homeKey = GlobalKey();
   final GlobalKey _destinationsKey = GlobalKey();
   final GlobalKey _packagesKey = GlobalKey();
-  final GlobalKey _aboutKey = GlobalKey();
 
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
@@ -27,6 +26,13 @@ class _WebHomeState extends State<WebHome> {
     }
   }
 
+  void _navigateToAboutUs() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const WebAboutUsPage()),
+    );
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -37,12 +43,25 @@ class _WebHomeState extends State<WebHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+    ),
+  ),
         title:  GestureDetector(
           onTap: () {
             _scrollToSection(_homeKey);},
           child: Text(
             'Travel Talk BD',
             style: TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 24,
             ),
@@ -75,7 +94,7 @@ class _WebHomeState extends State<WebHome> {
           ),
           const SizedBox(width: 8),
           TextButton(
-            onPressed: () => _scrollToSection(_aboutKey),
+            onPressed: _navigateToAboutUs,
             child: const Text(
               'About Us',
               style: TextStyle(fontSize: 16,color: Colors.white),
@@ -102,11 +121,6 @@ class _WebHomeState extends State<WebHome> {
             Container(
               key: _packagesKey,
               child: const WebHomePackages(),
-            ),
-            // About Section
-            Container(
-              key: _aboutKey,
-              child: const WebHomeAbout(),
             ),
           ],
         ),

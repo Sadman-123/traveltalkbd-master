@@ -34,6 +34,18 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+         flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+    ),
+  ),
         title: Text(
           widget.item.title,
           style: const TextStyle(

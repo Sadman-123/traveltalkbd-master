@@ -184,6 +184,49 @@ class Destination {
   }
 }
 
+class Employee {
+  final String id;
+  final String name;
+  final String designation;
+  final String pictureUrl;
+  final String quote;
+  final String experience; // Years of experience or experience description
+  final int rank; // Order in which they were added (1 = highest/lead)
+
+  Employee({
+    required this.id,
+    required this.name,
+    required this.designation,
+    required this.pictureUrl,
+    required this.quote,
+    required this.experience,
+    required this.rank,
+  });
+
+  factory Employee.fromMap(String id, Map<String, dynamic> map) {
+    return Employee(
+      id: id,
+      name: map['name'] ?? '',
+      designation: map['designation'] ?? '',
+      pictureUrl: map['pictureUrl'] ?? '',
+      quote: map['quote'] ?? '',
+      experience: map['experience'] ?? '',
+      rank: map['rank'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'designation': designation,
+      'pictureUrl': pictureUrl,
+      'quote': quote,
+      'experience': experience,
+      'rank': rank,
+    };
+  }
+}
+
 class AboutInfo {
   final String companyName;
   final String tagline;
@@ -196,6 +239,8 @@ class AboutInfo {
   final Map<String, dynamic> socialLinks;
   final int establishedYear;
   final double rating;
+  final List<String> documents; // List of document URLs or names
+  final Map<String, Employee> employees; // Map of employee ID to Employee
 
   AboutInfo({
     required this.companyName,
@@ -209,9 +254,31 @@ class AboutInfo {
     required this.socialLinks,
     required this.establishedYear,
     required this.rating,
+    required this.documents,
+    required this.employees,
   });
 
   factory AboutInfo.fromMap(Map<String, dynamic> map) {
+    // Parse documents
+    final documentsList = <String>[];
+    if (map['documents'] != null) {
+      if (map['documents'] is List) {
+        documentsList.addAll(List<String>.from(map['documents']));
+      } else if (map['documents'] is Map) {
+        // If documents is a map, extract values
+        documentsList.addAll((map['documents'] as Map).values.map((e) => e.toString()));
+      }
+    }
+
+    // Parse employees
+    final employeesMap = <String, Employee>{};
+    if (map['employees'] != null && map['employees'] is Map) {
+      final employeesData = Map<String, dynamic>.from(map['employees']);
+      for (final entry in employeesData.entries) {
+        employeesMap[entry.key] = Employee.fromMap(entry.key, Map<String, dynamic>.from(entry.value));
+      }
+    }
+
     return AboutInfo(
       companyName: map['companyName'] ?? '',
       tagline: map['tagline'] ?? '',
@@ -224,6 +291,8 @@ class AboutInfo {
       socialLinks: Map<String, dynamic>.from(map['socialLinks'] ?? const {}),
       establishedYear: map['establishedYear'] ?? 0,
       rating: (map['rating'] ?? 0).toDouble(),
+      documents: documentsList,
+      employees: employeesMap,
     );
   }
 }

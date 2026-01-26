@@ -37,7 +37,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -50,9 +50,22 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+         flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      ),
+    ),
+  ),
         title: const Text('Travel Talk BD - Admin Panel'),
         bottom: TabBar(
           labelColor: Colors.white,
+          unselectedLabelColor: Colors.black,
           controller: _tabController,
           isScrollable: true,
           tabs: const [
@@ -61,6 +74,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
             Tab(icon: Icon(Icons.article), text: 'Visa Packages'),
             Tab(icon: Icon(Icons.book_online), text: 'Bookings'),
             Tab(icon: Icon(Icons.campaign), text: 'Banners/Promotions'),
+            Tab(icon: Icon(Icons.info), text: 'About Us'),
           ],
         ),
       ),
@@ -72,6 +86,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           VisaPackagesTab(dbRef: _dbRef),
           BookingsTab(dbRef: _dbRef),
           BannersTab(dbRef: _dbRef),
+          AboutUsTab(dbRef: _dbRef),
         ],
       ),
     );
@@ -3665,6 +3680,915 @@ class _BannersTabState extends State<BannersTab> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+// ==================== ABOUT US TAB ====================
+class AboutUsTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const AboutUsTab({super.key, required this.dbRef});
+
+  @override
+  State<AboutUsTab> createState() => _AboutUsTabState();
+}
+
+class _AboutUsTabState extends State<AboutUsTab> {
+  Map<String, dynamic>? _aboutUs;
+  Map<String, dynamic> _employees = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAboutUs();
+    // Listen for real-time updates
+    widget.dbRef.child('about_us').onValue.listen((event) {
+      if (mounted) {
+        if (event.snapshot.exists) {
+          setState(() {
+            final raw = event.snapshot.value;
+            if (raw is Map) {
+              _aboutUs = Map<String, dynamic>.from(raw);
+              if (_aboutUs!['employees'] != null && _aboutUs!['employees'] is Map) {
+                _employees = Map<String, dynamic>.from(_aboutUs!['employees']);
+              } else {
+                _employees = {};
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _loadAboutUs() async {
+    try {
+      final snapshot = await widget.dbRef.child('about_us').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _aboutUs = Map<String, dynamic>.from(raw);
+            if (_aboutUs!['employees'] != null && _aboutUs!['employees'] is Map) {
+              _employees = Map<String, dynamic>.from(_aboutUs!['employees']);
+            } else {
+              _employees = {};
+            }
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading about us: $e')),
+        );
+      }
+    }
+  }
+
+  void _showEditAboutUsDialog() {
+    final formKey = GlobalKey<FormState>();
+    final companyNameController = TextEditingController(text: _aboutUs?['companyName'] ?? '');
+    final taglineController = TextEditingController(text: _aboutUs?['tagline'] ?? '');
+    final descriptionController = TextEditingController(text: _aboutUs?['description'] ?? '');
+    final missionController = TextEditingController(text: _aboutUs?['mission'] ?? '');
+    final visionController = TextEditingController(text: _aboutUs?['vision'] ?? '');
+    final ratingController = TextEditingController(text: (_aboutUs?['rating'] ?? 0).toString());
+    final establishedYearController = TextEditingController(text: (_aboutUs?['establishedYear'] ?? 0).toString());
+    
+    // Contact fields
+    final phoneController = TextEditingController(text: _aboutUs?['contact']?['phone'] ?? '');
+    final emailController = TextEditingController(text: _aboutUs?['contact']?['email'] ?? '');
+    final addressController = TextEditingController(text: _aboutUs?['contact']?['address'] ?? '');
+    
+    // Social links
+    final facebookController = TextEditingController(text: _aboutUs?['socialLinks']?['facebook'] ?? '');
+    final instagramController = TextEditingController(text: _aboutUs?['socialLinks']?['instagram'] ?? '');
+    final whatsappController = TextEditingController(text: _aboutUs?['socialLinks']?['whatsapp'] ?? '');
+    
+    // Lists
+    final whyChooseUsController = TextEditingController(text: (_aboutUs?['whyChooseUs'] as List?)?.join(', ') ?? '');
+    final servicesController = TextEditingController(text: (_aboutUs?['services'] as List?)?.join(', ') ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 800 ? 800 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Edit About Us',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: companyNameController,
+                            decoration: const InputDecoration(labelText: 'Company Name *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: taglineController,
+                            decoration: const InputDecoration(labelText: 'Tagline *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: descriptionController,
+                            decoration: const InputDecoration(labelText: 'Description *'),
+                            maxLines: 4,
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: missionController,
+                            decoration: const InputDecoration(labelText: 'Mission *'),
+                            maxLines: 3,
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: visionController,
+                            decoration: const InputDecoration(labelText: 'Vision *'),
+                            maxLines: 3,
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: ratingController,
+                                  decoration: const InputDecoration(labelText: 'Rating'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: establishedYearController,
+                                  decoration: const InputDecoration(labelText: 'Established Year'),
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          const Divider(),
+                          const Text('Contact Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: phoneController,
+                            decoration: const InputDecoration(labelText: 'Phone'),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: emailController,
+                            decoration: const InputDecoration(labelText: 'Email'),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: addressController,
+                            decoration: const InputDecoration(labelText: 'Address'),
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 24),
+                          const Divider(),
+                          const Text('Social Links', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: facebookController,
+                            decoration: const InputDecoration(labelText: 'Facebook URL'),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: instagramController,
+                            decoration: const InputDecoration(labelText: 'Instagram URL'),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: whatsappController,
+                            decoration: const InputDecoration(labelText: 'WhatsApp URL'),
+                          ),
+                          const SizedBox(height: 24),
+                          const Divider(),
+                          const Text('Why Choose Us (comma-separated)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: whyChooseUsController,
+                            decoration: const InputDecoration(hintText: 'Item 1, Item 2, Item 3...'),
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Services (comma-separated)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: servicesController,
+                            decoration: const InputDecoration(hintText: 'Service 1, Service 2, Service 3...'),
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (formKey.currentState!.validate()) {
+                                try {
+                                  final whyChooseUs = whyChooseUsController.text
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .where((e) => e.isNotEmpty)
+                                      .toList();
+                                  final services = servicesController.text
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .where((e) => e.isNotEmpty)
+                                      .toList();
+
+                                  final aboutUsData = {
+                                    'companyName': companyNameController.text,
+                                    'tagline': taglineController.text,
+                                    'description': descriptionController.text,
+                                    'mission': missionController.text,
+                                    'vision': visionController.text,
+                                    'rating': double.tryParse(ratingController.text) ?? 0.0,
+                                    'establishedYear': int.tryParse(establishedYearController.text) ?? 0,
+                                    'contact': {
+                                      'phone': phoneController.text,
+                                      'email': emailController.text,
+                                      'address': addressController.text,
+                                    },
+                                    'socialLinks': {
+                                      'facebook': facebookController.text,
+                                      'instagram': instagramController.text,
+                                      'whatsapp': whatsappController.text,
+                                    },
+                                    'whyChooseUs': whyChooseUs,
+                                    'services': services,
+                                    if (_aboutUs != null && _aboutUs!['documents'] != null) 'documents': _aboutUs!['documents'],
+                                    if (_aboutUs != null && _aboutUs!['employees'] != null) 'employees': _aboutUs!['employees'],
+                                  };
+
+                                  await widget.dbRef.child('about_us').set(aboutUsData);
+                                  if (mounted) {
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('About Us updated successfully')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            child: const Text('Save Changes'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddDocumentDialog() {
+    final formKey = GlobalKey<FormState>();
+    final documentUrlController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: MediaQuery.of(context).size.width > 500 ? 500 : MediaQuery.of(context).size.width * 0.9,
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Add Document', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: documentUrlController,
+                  decoration: const InputDecoration(labelText: 'Document URL or Name *'),
+                  validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (formKey.currentState!.validate()) {
+                          try {
+                            final documents = List<String>.from(_aboutUs?['documents'] ?? []);
+                            documents.add(documentUrlController.text);
+                            await widget.dbRef.child('about_us').child('documents').set(documents);
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Document added')),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      child: const Text('Add'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteDocument(int index) async {
+    try {
+      final documents = List<String>.from(_aboutUs?['documents'] ?? []);
+      documents.removeAt(index);
+      await widget.dbRef.child('about_us').child('documents').set(documents);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Document deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAddEmployeeDialog() {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController();
+    final designationController = TextEditingController();
+    final quoteController = TextEditingController();
+    final experienceController = TextEditingController();
+    final selectedImage = ValueNotifier<_PickedImage?>(null);
+    final isUploading = ValueNotifier<bool>(false);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Add Employee',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: nameController,
+                            decoration: const InputDecoration(labelText: 'Name *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: designationController,
+                            decoration: const InputDecoration(labelText: 'Designation *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: quoteController,
+                            decoration: const InputDecoration(labelText: 'Quote *'),
+                            maxLines: 3,
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: experienceController,
+                            decoration: const InputDecoration(labelText: 'Experience (e.g., "5+ years" or "10 years in travel industry")'),
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Employee Photo *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          ValueListenableBuilder<_PickedImage?>(
+                            valueListenable: selectedImage,
+                            builder: (context, image, _) {
+                              return Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final picker = ImagePicker();
+                                      _PickedImage? picked;
+                                      if (kIsWeb) {
+                                        final result = await picker.pickImage(source: ImageSource.gallery);
+                                        if (result != null) {
+                                          final bytes = await result.readAsBytes();
+                                          picked = _PickedImage(bytes: bytes, name: result.name);
+                                        }
+                                      } else {
+                                        final result = await picker.pickImage(source: ImageSource.gallery);
+                                        if (result != null) {
+                                          picked = _PickedImage(file: File(result.path));
+                                        }
+                                      }
+                                      if (picked != null) {
+                                        selectedImage.value = picked;
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 150,
+                                      height: 150,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.grey),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: image != null
+                                          ? (kIsWeb && image.bytes != null
+                                              ? Image.memory(image.bytes!, fit: BoxFit.cover)
+                                              : image.file != null
+                                                  ? Image.file(image.file!, fit: BoxFit.cover)
+                                                  : const Icon(Icons.person, size: 80))
+                                          : const Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.add_photo_alternate, size: 50),
+                                                SizedBox(height: 8),
+                                                Text('Tap to add photo'),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                                  if (image != null)
+                                    TextButton(
+                                      onPressed: () => selectedImage.value = null,
+                                      child: const Text('Remove Photo'),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: isUploading,
+                            builder: (context, uploading, _) {
+                              return ElevatedButton(
+                                onPressed: uploading
+                                    ? null
+                                    : () async {
+                                        if (formKey.currentState!.validate()) {
+                                          if (selectedImage.value == null) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Please select a photo')),
+                                            );
+                                            return;
+                                          }
+                                          setDialogState(() {
+                                            isUploading.value = true;
+                                          });
+                                          try {
+                                            String? imageUrl;
+                                            if (kIsWeb && selectedImage.value!.bytes != null) {
+                                              imageUrl = await CloudinaryService.uploadImageFromBytes(
+                                                selectedImage.value!.bytes!,
+                                                selectedImage.value!.name ?? 'employee_${DateTime.now().millisecondsSinceEpoch}',
+                                                folder: 'employees',
+                                              );
+                                            } else if (selectedImage.value!.file != null) {
+                                              imageUrl = await CloudinaryService.uploadImage(
+                                                selectedImage.value!.file!,
+                                                folder: 'employees',
+                                              );
+                                            }
+
+                                            if (imageUrl == null || imageUrl.isEmpty) {
+                                              throw Exception('Failed to upload image');
+                                            }
+
+                                            // Calculate rank (next highest rank)
+                                            final currentEmployees = _employees.values.toList();
+                                            final maxRank = currentEmployees.isEmpty
+                                                ? 0
+                                                : (currentEmployees.map((e) => (e['rank'] as int?) ?? 0).reduce((a, b) => a > b ? a : b));
+                                            final newRank = maxRank + 1;
+
+                                            final employeeData = {
+                                              'name': nameController.text,
+                                              'designation': designationController.text,
+                                              'pictureUrl': imageUrl,
+                                              'quote': quoteController.text,
+                                              'experience': experienceController.text,
+                                              'rank': newRank,
+                                            };
+
+                                            await widget.dbRef.child('about_us').child('employees').push().set(employeeData);
+                                            if (mounted) {
+                                              Navigator.pop(context);
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Employee added successfully')),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Error: $e')),
+                                              );
+                                            }
+                                          } finally {
+                                            setDialogState(() {
+                                              isUploading.value = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                                child: uploading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Add Employee'),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteEmployee(String id) async {
+    try {
+      await widget.dbRef.child('about_us').child('employees').child(id).remove();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Employee deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final documents = List<String>.from(_aboutUs?['documents'] ?? []);
+    final employeesList = _employees.entries.toList()
+      ..sort((a, b) {
+        final rankA = (a.value['rank'] as int?) ?? 0;
+        final rankB = (b.value['rank'] as int?) ?? 0;
+        return rankA.compareTo(rankB);
+      });
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Edit About Us Button
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('About Us Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(_aboutUs?['companyName'] ?? 'Not set'),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showEditAboutUsDialog,
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit About Us'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Documents Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Documents', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ElevatedButton.icon(
+                        onPressed: _showAddDocumentDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Document'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (documents.isEmpty)
+                    const Text('No documents added yet')
+                  else
+                    ...documents.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final doc = entry.value;
+                      return ListTile(
+                        leading: const Icon(Icons.description),
+                        title: Text(doc),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Document'),
+                                content: const Text('Are you sure you want to delete this document?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _deleteDocument(index);
+                                    },
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Employees Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Employees', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      ElevatedButton.icon(
+                        onPressed: _showAddEmployeeDialog,
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Employee'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (employeesList.isEmpty)
+                    const Text('No employees added yet')
+                  else
+                    ...employeesList.map((entry) {
+                      final employee = entry.value;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Photo on left
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.grey.shade300, width: 2),
+                                ),
+                                child: ClipOval(
+                                  child: employee['pictureUrl'] != null && employee['pictureUrl'].toString().isNotEmpty
+                                      ? Image.network(
+                                          employee['pictureUrl'],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50),
+                                        )
+                                      : const Icon(Icons.person, size: 50),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              // Details on right
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      employee['name'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      employee['designation'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    if (employee['experience'] != null && employee['experience'].toString().isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.work_outline, size: 14, color: Colors.grey[600]),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            employee['experience'],
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: Text(
+                                        '"${employee['quote'] ?? ''}"',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Rank: ${employee['rank'] ?? 0}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Delete button
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Delete Employee'),
+                                      content: const Text('Are you sure you want to delete this employee?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            _deleteEmployee(entry.key);
+                                          },
+                                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

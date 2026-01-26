@@ -22,7 +22,6 @@ class Traveltalktheme {
 
         // AppBar
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
