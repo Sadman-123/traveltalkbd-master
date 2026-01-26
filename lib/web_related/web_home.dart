@@ -58,14 +58,15 @@ class _WebHomeState extends State<WebHome> {
         title:  GestureDetector(
           onTap: () {
             _scrollToSection(_homeKey);},
-          child: Text(
-            'Travel Talk BD',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
-          ),
+          // child: Text(
+          //   'Travel Talk BD',
+          //   style: TextStyle(
+          //     color: Colors.white,
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 24,
+          //   ),
+          // ),
+          child: Image.asset('lol000.png',height: 150,width: 150,),
         ),
         elevation: 0,
         actions: [

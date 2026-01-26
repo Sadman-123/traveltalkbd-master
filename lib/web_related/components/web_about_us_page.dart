@@ -156,7 +156,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
         title: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: const Text(
-            'Travel Talk BD',
+            'About Us',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 24,
