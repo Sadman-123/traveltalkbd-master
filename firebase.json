@@ -1,0 +1,25 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "travel-talk-bd",
+                    "appId": "1:754718364327:android:90fce3e3e325417a830182",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "travel-talk-bd",
+                    "configurations": {
+                        "android": "1:754718364327:android:90fce3e3e325417a830182",
+                        "ios": "1:754718364327:ios:4fcbf000fd1b0040830182",
+                        "macos": "1:754718364327:ios:4fcbf000fd1b0040830182",
+                        "web": "1:754718364327:web:484c276052eca9da830182",
+                        "windows": "1:754718364327:web:22ee0eac61055a9a830182"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,3670 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
+import 'package:traveltalkbd/services/cloudinary_service.dart';
+import 'package:http/http.dart' as http;
+
+// Conditional import for download functionality
+// Use web_download on web, mobile_download on mobile
+import 'utils/web_download.dart' if (dart.library.io) 'utils/mobile_download.dart' as download_util;
+
+// Platform-agnostic image data class
+class _PickedImage {
+  final File? file;
+  final Uint8List? bytes;
+  final String? name;
+
+  _PickedImage({this.file, this.bytes, this.name});
+
+  bool get isWeb => kIsWeb;
+}
+
+class AdminPanel extends StatefulWidget {
+  const AdminPanel({super.key});
+
+  @override
+  State<AdminPanel> createState() => _AdminPanelState();
+}
+
+class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 5, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Travel Talk BD - Admin Panel'),
+        bottom: TabBar(
+          labelColor: Colors.white,
+          controller: _tabController,
+          isScrollable: true,
+          tabs: const [
+            Tab(icon: Icon(Icons.location_on), text: 'Destinations'),
+            Tab(icon: Icon(Icons.flight), text: 'Tour Packages'),
+            Tab(icon: Icon(Icons.article), text: 'Visa Packages'),
+            Tab(icon: Icon(Icons.book_online), text: 'Bookings'),
+            Tab(icon: Icon(Icons.campaign), text: 'Banners/Promotions'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          DestinationsTab(dbRef: _dbRef),
+          TourPackagesTab(dbRef: _dbRef),
+          VisaPackagesTab(dbRef: _dbRef),
+          BookingsTab(dbRef: _dbRef),
+          BannersTab(dbRef: _dbRef),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== DESTINATIONS TAB ====================
+class DestinationsTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const DestinationsTab({super.key, required this.dbRef});
+
+  @override
+  State<DestinationsTab> createState() => _DestinationsTabState();
+}
+
+class _DestinationsTabState extends State<DestinationsTab> {
+  Map<String, dynamic> _destinations = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDestinations();
+  }
+
+  Future<void> _loadDestinations() async {
+    try {
+      final snapshot = await widget.dbRef.child('destinations').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _destinations = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading destinations: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteDestination(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Destination'),
+        content: const Text('Are you sure you want to delete this destination?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await widget.dbRef.child('destinations').child(id).remove();
+        _loadDestinations();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Destination deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting destination: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Destinations',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showDestinationDialog(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Destination'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _destinations.isEmpty
+              ? const Center(child: Text('No destinations found'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _destinations.length,
+                  itemBuilder: (context, index) {
+                    final entry = _destinations.entries.elementAt(index);
+                    final dest = Map<String, dynamic>.from(
+                      entry.value is Map
+                          ? (entry.value as Map).map((k, v) => MapEntry(k.toString(), v))
+                          : {},
+                    );
+                    return _DestinationCard(
+                      id: entry.key,
+                      destination: dest,
+                      onEdit: () => _showDestinationDialog(id: entry.key, data: dest),
+                      onDelete: () => _deleteDestination(entry.key),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showDestinationDialog({String? id, Map<String, dynamic>? data}) {
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: data?['name'] ?? '');
+    final countryController = TextEditingController(text: data?['country'] ?? '');
+    final continentController = TextEditingController(text: data?['continent'] ?? '');
+    final currencyController = TextEditingController(text: data?['currency'] ?? 'BDT');
+    final shortDescController = TextEditingController(text: data?['shortDescription'] ?? '');
+    final bestTimeController = TextEditingController(text: data?['bestTimeToVisit'] ?? '');
+    final startingPriceController = TextEditingController(text: data?['startingPrice']?.toString() ?? '');
+    final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    final popularForController = TextEditingController(
+      text: (data?['popularFor'] as List?)?.join(', ') ?? '',
+    );
+    
+    // Handle images - can be single URL string or list of URLs
+    List<String> imageUrls = [];
+    if (data?['photo'] != null) {
+      if (data!['photo'] is List) {
+        imageUrls = List<String>.from(data['photo']);
+      } else if (data['photo'] is String) {
+        imageUrls = [data['photo']];
+      }
+    }
+    
+    final selectedImages = ValueNotifier<List<_PickedImage>>([]);
+    final existingImageUrls = ValueNotifier<List<String>>(imageUrls);
+    final isUploading = ValueNotifier<bool>(false);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          id == null ? 'Add Destination' : 'Edit Destination',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Name *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: countryController,
+                    decoration: const InputDecoration(labelText: 'Country *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: continentController,
+                    decoration: const InputDecoration(labelText: 'Continent *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: currencyController,
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Images *',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<List<_PickedImage>>(
+                    valueListenable: selectedImages,
+                    builder: (context, pickedImages, _) {
+                      return ValueListenableBuilder<List<String>>(
+                        valueListenable: existingImageUrls,
+                        builder: (context, urls, _) {
+                          final totalImages = pickedImages.length + urls.length;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final ImagePicker picker = ImagePicker();
+                                  try {
+                                    final List<XFile> pickedFiles = await picker.pickMultiImage();
+                                    if (pickedFiles.isNotEmpty) {
+                                    final List<_PickedImage> images = [];
+                                    for (final xFile in pickedFiles) {
+                                      if (kIsWeb) {
+                                        final bytes = await xFile.readAsBytes();
+                                        // Ensure filename has extension
+                                        String fileName = xFile.name;
+                                        if (!fileName.contains('.')) {
+                                          // Try to detect from mime type or default to jpg
+                                          fileName = '${xFile.name}.jpg';
+                                        }
+                                        images.add(_PickedImage(
+                                          bytes: bytes,
+                                          name: fileName,
+                                        ));
+                                      } else {
+                                        images.add(_PickedImage(
+                                          file: File(xFile.path),
+                                          name: xFile.name.isNotEmpty ? xFile.name : xFile.path.split('/').last,
+                                        ));
+                                      }
+                                    }
+                                      selectedImages.value = images;
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error picking images: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.add_photo_alternate),
+                                label: const Text('Pick Images'),
+                              ),
+                              if (totalImages > 0) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    // Show existing URLs
+                                    ...urls.map((url) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.grey),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              url,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              existingImageUrls.value = urls.where((u) => u != url).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                    // Show selected files
+                                    ...pickedImages.map((pickedImage) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.blue),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: kIsWeb && pickedImage.bytes != null
+                                                ? Image.memory(
+                                                    pickedImage.bytes!,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : pickedImage.file != null
+                                                    ? Image.file(
+                                                        pickedImage.file!,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : const Icon(Icons.broken_image),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              selectedImages.value = pickedImages.where((img) => img != pickedImage).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: shortDescController,
+                    decoration: const InputDecoration(labelText: 'Short Description *'),
+                    maxLines: 2,
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: bestTimeController,
+                    decoration: const InputDecoration(labelText: 'Best Time to Visit'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: startingPriceController,
+                    decoration: const InputDecoration(labelText: 'Starting Price *'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: popularForController,
+                    decoration: const InputDecoration(
+                      labelText: 'Popular For (comma separated)',
+                      hintText: 'Beach, Shopping, Food',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: availableController,
+                    builder: (context, available, _) => SwitchListTile(
+                      title: const Text('Available'),
+                      value: available,
+                      onChanged: (v) {
+                        availableController.value = v;
+                        setDialogState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+                ),
+                // Actions
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: isUploading,
+                        builder: (context, uploading, _) {
+                          return ElevatedButton(
+                            onPressed: uploading ? null : () async {
+                              if (formKey.currentState!.validate()) {
+                                final selectedFiles = selectedImages.value;
+                                final existingUrls = existingImageUrls.value;
+                                
+                                if (selectedFiles.isEmpty && existingUrls.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select at least one image')),
+                                  );
+                                  return;
+                                }
+
+                                isUploading.value = true;
+                                
+                                try {
+                                  // Upload new images to Cloudinary
+                                  List<String> uploadedUrls = [];
+                                  if (selectedFiles.isNotEmpty) {
+                                    for (final pickedImage in selectedFiles) {
+                                      String url;
+                                      if (kIsWeb && pickedImage.bytes != null) {
+                                        url = await CloudinaryService.uploadImageFromBytes(
+                                          pickedImage.bytes!,
+                                          pickedImage.name ?? 'image_${DateTime.now().millisecondsSinceEpoch}',
+                                          folder: 'destinations',
+                                        );
+                                      } else if (pickedImage.file != null) {
+                                        url = await CloudinaryService.uploadImage(
+                                          pickedImage.file!,
+                                          folder: 'destinations',
+                                        );
+                                      } else {
+                                        continue;
+                                      }
+                                      uploadedUrls.add(url);
+                                    }
+                                  }
+                                  
+                                  // Combine existing URLs with newly uploaded URLs
+                                  final allImageUrls = [...existingUrls, ...uploadedUrls];
+                                  
+                                  final popularFor = popularForController.text
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .where((e) => e.isNotEmpty)
+                                      .toList();
+
+                                  final destinationData = {
+                                    'name': nameController.text,
+                                    'country': countryController.text,
+                                    'continent': continentController.text,
+                                    'currency': currencyController.text,
+                                    'photo': allImageUrls.length == 1 ? allImageUrls.first : allImageUrls,
+                                    'shortDescription': shortDescController.text,
+                                    'bestTimeToVisit': bestTimeController.text,
+                                    'startingPrice': int.tryParse(startingPriceController.text) ?? 0,
+                                    'popularFor': popularFor,
+                                    'available': availableController.value,
+                                  };
+
+                                  if (id == null) {
+                                    // Generate new ID
+                                    final newId = 'dest_${DateTime.now().millisecondsSinceEpoch}';
+                                    await widget.dbRef.child('destinations').child(newId).set(destinationData);
+                                  } else {
+                                    await widget.dbRef.child('destinations').child(id).update(destinationData);
+                                  }
+                                  Navigator.pop(context);
+                                  _loadDestinations();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(id == null ? 'Destination added!' : 'Destination updated!')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    final errorMessage = e.toString();
+                                    print('Upload error details: $errorMessage'); // Debug print
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $errorMessage'),
+                                        duration: const Duration(seconds: 5),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  isUploading.value = false;
+                                }
+                              }
+                            },
+                            child: uploading 
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('Save'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationCard extends StatelessWidget {
+  final String id;
+  final Map<String, dynamic> destination;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _DestinationCard({
+    required this.id,
+    required this.destination,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Widget _buildImageWidget(dynamic photo, {double? width, double? height}) {
+    String? imageUrl;
+    if (photo is List && photo.isNotEmpty) {
+      imageUrl = photo.first.toString();
+    } else if (photo is String) {
+      imageUrl = photo;
+    }
+    
+    return Image.network(
+      imageUrl ?? '',
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: const Icon(Icons.image_not_supported),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _buildImageWidget(
+                destination['photo'],
+                width: 120,
+                height: 120,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          destination['name'] ?? 'Unknown',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Chip(
+                        label: Text(destination['available'] == true ? 'Available' : 'Unavailable'),
+                        backgroundColor: destination['available'] == true ? Colors.green[100] : Colors.red[100],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${destination['country']}, ${destination['continent']}'),
+                  const SizedBox(height: 4),
+                  Text(
+                    destination['shortDescription'] ?? '',
+                    style: TextStyle(color: Colors.grey[600]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${destination['currency']} ${destination['startingPrice']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: onEdit,
+                        color: Colors.blue,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: onDelete,
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== TOUR PACKAGES TAB ====================
+class TourPackagesTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const TourPackagesTab({super.key, required this.dbRef});
+
+  @override
+  State<TourPackagesTab> createState() => _TourPackagesTabState();
+}
+
+class _TourPackagesTabState extends State<TourPackagesTab> {
+  Map<String, dynamic> _tours = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTours();
+  }
+
+  Future<void> _loadTours() async {
+    try {
+      final snapshot = await widget.dbRef.child('tour_packages').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _tours = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading tours: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteTour(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Tour Package'),
+        content: const Text('Are you sure you want to delete this tour package?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await widget.dbRef.child('tour_packages').child(id).remove();
+        _loadTours();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tour package deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting tour: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Tour Packages',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showTourDialog(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Tour Package'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _tours.isEmpty
+              ? const Center(child: Text('No tour packages found'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _tours.length,
+                  itemBuilder: (context, index) {
+                    final entry = _tours.entries.elementAt(index);
+                    final tour = Map<String, dynamic>.from(
+                      entry.value is Map
+                          ? (entry.value as Map).map((k, v) => MapEntry(k.toString(), v))
+                          : {},
+                    );
+                    return _TourCard(
+                      id: entry.key,
+                      tour: tour,
+                      onEdit: () => _showTourDialog(id: entry.key, data: tour),
+                      onDelete: () => _deleteTour(entry.key),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showTourDialog({String? id, Map<String, dynamic>? data}) {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: data?['title'] ?? '');
+    final cityController = TextEditingController(text: data?['city'] ?? '');
+    final countryController = TextEditingController(text: data?['country'] ?? '');
+    final currencyController = TextEditingController(text: data?['currency'] ?? 'BDT');
+    final durationController = TextEditingController(text: data?['duration'] ?? '');
+    final priceController = TextEditingController(text: data?['price']?.toString() ?? '');
+    final ratingController = TextEditingController(text: data?['rating']?.toString() ?? '4.5');
+    final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    
+    // Handle images - can be single URL string or list of URLs
+    List<String> imageUrls = [];
+    if (data?['photo'] != null) {
+      if (data!['photo'] is List) {
+        imageUrls = List<String>.from(data['photo']);
+      } else if (data['photo'] is String) {
+        imageUrls = [data['photo']];
+      }
+    }
+    
+    final selectedImages = ValueNotifier<List<_PickedImage>>([]);
+    final existingImageUrls = ValueNotifier<List<String>>(imageUrls);
+    final isUploading = ValueNotifier<bool>(false);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          id == null ? 'Add Tour Package' : 'Edit Tour Package',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Title *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: cityController,
+                    decoration: const InputDecoration(labelText: 'City *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: countryController,
+                    decoration: const InputDecoration(labelText: 'Country *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: currencyController,
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: durationController,
+                    decoration: const InputDecoration(labelText: 'Duration (e.g., 5 Days / 4 Nights) *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Images *',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<List<_PickedImage>>(
+                    valueListenable: selectedImages,
+                    builder: (context, pickedImages, _) {
+                      return ValueListenableBuilder<List<String>>(
+                        valueListenable: existingImageUrls,
+                        builder: (context, urls, _) {
+                          final totalImages = pickedImages.length + urls.length;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final ImagePicker picker = ImagePicker();
+                                  try {
+                                    final List<XFile> pickedFiles = await picker.pickMultiImage();
+                                    if (pickedFiles.isNotEmpty) {
+                                    final List<_PickedImage> images = [];
+                                    for (final xFile in pickedFiles) {
+                                      if (kIsWeb) {
+                                        final bytes = await xFile.readAsBytes();
+                                        // Ensure filename has extension
+                                        String fileName = xFile.name;
+                                        if (!fileName.contains('.')) {
+                                          // Try to detect from mime type or default to jpg
+                                          fileName = '${xFile.name}.jpg';
+                                        }
+                                        images.add(_PickedImage(
+                                          bytes: bytes,
+                                          name: fileName,
+                                        ));
+                                      } else {
+                                        images.add(_PickedImage(
+                                          file: File(xFile.path),
+                                          name: xFile.name.isNotEmpty ? xFile.name : xFile.path.split('/').last,
+                                        ));
+                                      }
+                                    }
+                                      selectedImages.value = images;
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error picking images: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.add_photo_alternate),
+                                label: const Text('Pick Images'),
+                              ),
+                              if (totalImages > 0) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    // Show existing URLs
+                                    ...urls.map((url) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.grey),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              url,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              existingImageUrls.value = urls.where((u) => u != url).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                    // Show selected files
+                                    ...pickedImages.map((pickedImage) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.blue),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: kIsWeb && pickedImage.bytes != null
+                                                ? Image.memory(
+                                                    pickedImage.bytes!,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : pickedImage.file != null
+                                                    ? Image.file(
+                                                        pickedImage.file!,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : const Icon(Icons.broken_image),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              selectedImages.value = pickedImages.where((img) => img != pickedImage).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: priceController,
+                    decoration: const InputDecoration(labelText: 'Price *'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: ratingController,
+                    decoration: const InputDecoration(labelText: 'Rating (0-5)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: availableController,
+                    builder: (context, available, _) => SwitchListTile(
+                      title: const Text('Available'),
+                      value: available,
+                      onChanged: (v) {
+                        availableController.value = v;
+                        setDialogState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+                ),
+                // Actions
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: isUploading,
+                        builder: (context, uploading, _) {
+                          return ElevatedButton(
+                            onPressed: uploading ? null : () async {
+                              if (formKey.currentState!.validate()) {
+                                final selectedFiles = selectedImages.value;
+                                final existingUrls = existingImageUrls.value;
+                                
+                                if (selectedFiles.isEmpty && existingUrls.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select at least one image')),
+                                  );
+                                  return;
+                                }
+
+                                isUploading.value = true;
+                                
+                                try {
+                                  // Upload new images to Cloudinary
+                                  List<String> uploadedUrls = [];
+                                  if (selectedFiles.isNotEmpty) {
+                                    for (final pickedImage in selectedFiles) {
+                                      String url;
+                                      if (kIsWeb && pickedImage.bytes != null) {
+                                        url = await CloudinaryService.uploadImageFromBytes(
+                                          pickedImage.bytes!,
+                                          pickedImage.name ?? 'image_${DateTime.now().millisecondsSinceEpoch}',
+                                          folder: 'tour_packages',
+                                        );
+                                      } else if (pickedImage.file != null) {
+                                        url = await CloudinaryService.uploadImage(
+                                          pickedImage.file!,
+                                          folder: 'tour_packages',
+                                        );
+                                      } else {
+                                        continue;
+                                      }
+                                      uploadedUrls.add(url);
+                                    }
+                                  }
+                                  
+                                  // Combine existing URLs with newly uploaded URLs
+                                  final allImageUrls = [...existingUrls, ...uploadedUrls];
+                                  
+                                  final tourData = {
+                                    'title': titleController.text,
+                                    'city': cityController.text,
+                                    'country': countryController.text,
+                                    'currency': currencyController.text,
+                                    'duration': durationController.text,
+                                    'photo': allImageUrls.length == 1 ? allImageUrls.first : allImageUrls,
+                                    'price': int.tryParse(priceController.text) ?? 0,
+                                    'rating': double.tryParse(ratingController.text) ?? 4.5,
+                                    'available': availableController.value,
+                                    'type': 'tour',
+                                  };
+
+                                  if (id == null) {
+                                    final newId = 'tour_${DateTime.now().millisecondsSinceEpoch}';
+                                    await widget.dbRef.child('tour_packages').child(newId).set(tourData);
+                                  } else {
+                                    await widget.dbRef.child('tour_packages').child(id).update(tourData);
+                                  }
+                                  Navigator.pop(context);
+                                  _loadTours();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(id == null ? 'Tour package added!' : 'Tour package updated!')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    final errorMessage = e.toString();
+                                    print('Upload error details: $errorMessage'); // Debug print
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $errorMessage'),
+                                        duration: const Duration(seconds: 5),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  isUploading.value = false;
+                                }
+                              }
+                            },
+                            child: uploading 
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('Save'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TourCard extends StatelessWidget {
+  final String id;
+  final Map<String, dynamic> tour;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _TourCard({
+    required this.id,
+    required this.tour,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Widget _buildImageWidget(dynamic photo, {double? width, double? height}) {
+    String? imageUrl;
+    if (photo is List && photo.isNotEmpty) {
+      imageUrl = photo.first.toString();
+    } else if (photo is String) {
+      imageUrl = photo;
+    }
+    
+    return Image.network(
+      imageUrl ?? '',
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: const Icon(Icons.image_not_supported),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _buildImageWidget(
+                tour['photo'],
+                width: 120,
+                height: 120,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tour['title'] ?? 'Unknown',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Chip(
+                        label: Text(tour['available'] == true ? 'Available' : 'Unavailable'),
+                        backgroundColor: tour['available'] == true ? Colors.green[100] : Colors.red[100],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${tour['city']}, ${tour['country']}'),
+                  const SizedBox(height: 4),
+                  Text('Duration: ${tour['duration'] ?? 'N/A'}'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${tour['currency']} ${tour['price']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      const SizedBox(width: 16),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          Text('${tour['rating'] ?? 'N/A'}'),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: onEdit,
+                        color: Colors.blue,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: onDelete,
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== VISA PACKAGES TAB ====================
+class VisaPackagesTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const VisaPackagesTab({super.key, required this.dbRef});
+
+  @override
+  State<VisaPackagesTab> createState() => _VisaPackagesTabState();
+}
+
+class _VisaPackagesTabState extends State<VisaPackagesTab> {
+  Map<String, dynamic> _visas = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVisas();
+  }
+
+  Future<void> _loadVisas() async {
+    try {
+      final snapshot = await widget.dbRef.child('visa_packages').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _visas = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading visas: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteVisa(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Visa Package'),
+        content: const Text('Are you sure you want to delete this visa package?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await widget.dbRef.child('visa_packages').child(id).remove();
+        _loadVisas();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Visa package deleted successfully')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting visa: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Visa Packages',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showVisaDialog(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Visa Package'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _visas.isEmpty
+              ? const Center(child: Text('No visa packages found'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _visas.length,
+                  itemBuilder: (context, index) {
+                    final entry = _visas.entries.elementAt(index);
+                    final visa = Map<String, dynamic>.from(
+                      entry.value is Map
+                          ? (entry.value as Map).map((k, v) => MapEntry(k.toString(), v))
+                          : {},
+                    );
+                    return _VisaCard(
+                      id: entry.key,
+                      visa: visa,
+                      onEdit: () => _showVisaDialog(id: entry.key, data: visa),
+                      onDelete: () => _deleteVisa(entry.key),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _showVisaDialog({String? id, Map<String, dynamic>? data}) {
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: data?['title'] ?? '');
+    final countryController = TextEditingController(text: data?['country'] ?? '');
+    final currencyController = TextEditingController(text: data?['currency'] ?? 'BDT');
+    final priceController = TextEditingController(text: data?['price']?.toString() ?? '');
+    final visaTypeController = TextEditingController(text: data?['visaType'] ?? '');
+    final validityController = TextEditingController(text: data?['validity'] ?? '');
+    final processingTimeController = TextEditingController(text: data?['processingTime'] ?? '');
+    final documentsController = TextEditingController(
+      text: (data?['requiredDocuments'] as List?)?.join(', ') ?? '',
+    );
+    final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    
+    // Handle images - can be single URL string or list of URLs
+    List<String> imageUrls = [];
+    if (data?['photo'] != null) {
+      if (data!['photo'] is List) {
+        imageUrls = List<String>.from(data['photo']);
+      } else if (data['photo'] is String) {
+        imageUrls = [data['photo']];
+      }
+    }
+    
+    final selectedImages = ValueNotifier<List<_PickedImage>>([]);
+    final existingImageUrls = ValueNotifier<List<String>>(imageUrls);
+    final isUploading = ValueNotifier<bool>(false);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          id == null ? 'Add Visa Package' : 'Edit Visa Package',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Title *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: countryController,
+                    decoration: const InputDecoration(labelText: 'Country *'),
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: currencyController,
+                    decoration: const InputDecoration(labelText: 'Currency'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Images *',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<List<_PickedImage>>(
+                    valueListenable: selectedImages,
+                    builder: (context, pickedImages, _) {
+                      return ValueListenableBuilder<List<String>>(
+                        valueListenable: existingImageUrls,
+                        builder: (context, urls, _) {
+                          final totalImages = pickedImages.length + urls.length;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final ImagePicker picker = ImagePicker();
+                                  try {
+                                    final List<XFile> pickedFiles = await picker.pickMultiImage();
+                                    if (pickedFiles.isNotEmpty) {
+                                    final List<_PickedImage> images = [];
+                                    for (final xFile in pickedFiles) {
+                                      if (kIsWeb) {
+                                        final bytes = await xFile.readAsBytes();
+                                        // Ensure filename has extension
+                                        String fileName = xFile.name;
+                                        if (!fileName.contains('.')) {
+                                          // Try to detect from mime type or default to jpg
+                                          fileName = '${xFile.name}.jpg';
+                                        }
+                                        images.add(_PickedImage(
+                                          bytes: bytes,
+                                          name: fileName,
+                                        ));
+                                      } else {
+                                        images.add(_PickedImage(
+                                          file: File(xFile.path),
+                                          name: xFile.name.isNotEmpty ? xFile.name : xFile.path.split('/').last,
+                                        ));
+                                      }
+                                    }
+                                      selectedImages.value = images;
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error picking images: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.add_photo_alternate),
+                                label: const Text('Pick Images'),
+                              ),
+                              if (totalImages > 0) ...[
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    // Show existing URLs
+                                    ...urls.map((url) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.grey),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              url,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                                            ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              existingImageUrls.value = urls.where((u) => u != url).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                    // Show selected files
+                                    ...pickedImages.map((pickedImage) => Stack(
+                                      children: [
+                                        Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.blue),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: kIsWeb && pickedImage.bytes != null
+                                                ? Image.memory(
+                                                    pickedImage.bytes!,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : pickedImage.file != null
+                                                    ? Image.file(
+                                                        pickedImage.file!,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : const Icon(Icons.broken_image),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                            onPressed: () {
+                                              selectedImages.value = pickedImages.where((img) => img != pickedImage).toList();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    )),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: priceController,
+                    decoration: const InputDecoration(labelText: 'Price *'),
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: visaTypeController,
+                    decoration: const InputDecoration(labelText: 'Visa Type (e.g., Tourist)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: validityController,
+                    decoration: const InputDecoration(labelText: 'Validity (e.g., 30 Days)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: processingTimeController,
+                    decoration: const InputDecoration(labelText: 'Processing Time'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: documentsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Required Documents (comma separated)',
+                      hintText: 'Passport, Photo, NID Copy',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: availableController,
+                    builder: (context, available, _) => SwitchListTile(
+                      title: const Text('Available'),
+                      value: available,
+                      onChanged: (v) {
+                        availableController.value = v;
+                        setDialogState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+                ),
+                // Actions
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 12),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: isUploading,
+                        builder: (context, uploading, _) {
+                          return ElevatedButton(
+                            onPressed: uploading ? null : () async {
+                              if (formKey.currentState!.validate()) {
+                                final selectedFiles = selectedImages.value;
+                                final existingUrls = existingImageUrls.value;
+                                
+                                if (selectedFiles.isEmpty && existingUrls.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please select at least one image')),
+                                  );
+                                  return;
+                                }
+
+                                isUploading.value = true;
+                                
+                                try {
+                                  // Upload new images to Cloudinary
+                                  List<String> uploadedUrls = [];
+                                  if (selectedFiles.isNotEmpty) {
+                                    for (final pickedImage in selectedFiles) {
+                                      String url;
+                                      if (kIsWeb && pickedImage.bytes != null) {
+                                        url = await CloudinaryService.uploadImageFromBytes(
+                                          pickedImage.bytes!,
+                                          pickedImage.name ?? 'image_${DateTime.now().millisecondsSinceEpoch}',
+                                          folder: 'visa_packages',
+                                        );
+                                      } else if (pickedImage.file != null) {
+                                        url = await CloudinaryService.uploadImage(
+                                          pickedImage.file!,
+                                          folder: 'visa_packages',
+                                        );
+                                      } else {
+                                        continue;
+                                      }
+                                      uploadedUrls.add(url);
+                                    }
+                                  }
+                                  
+                                  // Combine existing URLs with newly uploaded URLs
+                                  final allImageUrls = [...existingUrls, ...uploadedUrls];
+                                  
+                                  final documents = documentsController.text
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .where((e) => e.isNotEmpty)
+                                      .toList();
+
+                                  final visaData = {
+                                    'title': titleController.text,
+                                    'country': countryController.text,
+                                    'currency': currencyController.text,
+                                    'photo': allImageUrls.length == 1 ? allImageUrls.first : allImageUrls,
+                                    'price': int.tryParse(priceController.text) ?? 0,
+                                    'visaType': visaTypeController.text,
+                                    'validity': validityController.text,
+                                    'processingTime': processingTimeController.text,
+                                    'requiredDocuments': documents,
+                                    'available': availableController.value,
+                                    'type': 'visa',
+                                  };
+
+                                  if (id == null) {
+                                    final newId = 'visa_${DateTime.now().millisecondsSinceEpoch}';
+                                    await widget.dbRef.child('visa_packages').child(newId).set(visaData);
+                                  } else {
+                                    await widget.dbRef.child('visa_packages').child(id).update(visaData);
+                                  }
+                                  Navigator.pop(context);
+                                  _loadVisas();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(id == null ? 'Visa package added!' : 'Visa package updated!')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    final errorMessage = e.toString();
+                                    print('Upload error details: $errorMessage'); // Debug print
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $errorMessage'),
+                                        duration: const Duration(seconds: 5),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  isUploading.value = false;
+                                }
+                              }
+                            },
+                            child: uploading 
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('Save'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VisaCard extends StatelessWidget {
+  final String id;
+  final Map<String, dynamic> visa;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _VisaCard({
+    required this.id,
+    required this.visa,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  Widget _buildImageWidget(dynamic photo, {double? width, double? height}) {
+    String? imageUrl;
+    if (photo is List && photo.isNotEmpty) {
+      imageUrl = photo.first.toString();
+    } else if (photo is String) {
+      imageUrl = photo;
+    }
+    
+    return Image.network(
+      imageUrl ?? '',
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Container(
+        width: width,
+        height: height,
+        color: Colors.grey[300],
+        child: const Icon(Icons.image_not_supported),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _buildImageWidget(
+                visa['photo'],
+                width: 120,
+                height: 120,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          visa['title'] ?? 'Unknown',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Chip(
+                        label: Text(visa['available'] == true ? 'Available' : 'Unavailable'),
+                        backgroundColor: visa['available'] == true ? Colors.green[100] : Colors.red[100],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${visa['country']} - ${visa['visaType'] ?? 'N/A'}'),
+                  const SizedBox(height: 4),
+                  if (visa['validity'] != null) Text('Validity: ${visa['validity']}'),
+                  if (visa['processingTime'] != null) Text('Processing: ${visa['processingTime']}'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${visa['currency']} ${visa['price']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: onEdit,
+                        color: Colors.blue,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: onDelete,
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== BOOKINGS TAB ====================
+class BookingsTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const BookingsTab({super.key, required this.dbRef});
+
+  @override
+  State<BookingsTab> createState() => _BookingsTabState();
+}
+
+class _BookingsTabState extends State<BookingsTab> {
+  Map<String, dynamic> _bookings = {};
+  bool _isLoading = true;
+  String _filterStatus = 'all';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBookings();
+    // Listen for real-time updates
+    widget.dbRef.child('bookings').onValue.listen((event) {
+      if (event.snapshot.exists) {
+        setState(() {
+          final raw = event.snapshot.value;
+          if (raw is Map) {
+            _bookings = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+        });
+      } else {
+        setState(() {
+          _bookings = {};
+        });
+      }
+    });
+  }
+
+  Future<void> _loadBookings() async {
+    try {
+      final snapshot = await widget.dbRef.child('bookings').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _bookings = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading bookings: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateBookingStatus(String id, String status) async {
+    try {
+      await widget.dbRef.child('bookings').child(id).update({'status': status});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Booking status updated to $status')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating status: $e')),
+        );
+      }
+    }
+  }
+
+  List<MapEntry<String, dynamic>> get _filteredBookings {
+    final searchQuery = _searchController.text.toLowerCase().trim();
+    
+    var filtered = _bookings.entries.where((entry) {
+      final value = entry.value;
+      if (value is Map) {
+        final booking = Map<String, dynamic>.from(
+          value.map((k, v) => MapEntry(k.toString(), v)),
+        );
+        
+        // Filter by status
+        if (_filterStatus != 'all' && booking['status'] != _filterStatus) {
+          return false;
+        }
+        
+        // Filter by search query
+        if (searchQuery.isNotEmpty) {
+          final name = (booking['name'] ?? '').toString().toLowerCase();
+          final email = (booking['email'] ?? '').toString().toLowerCase();
+          final phone = (booking['phone'] ?? '').toString().toLowerCase();
+          final itemTitle = (booking['itemTitle'] ?? '').toString().toLowerCase();
+          final itemType = (booking['itemType'] ?? '').toString().toLowerCase();
+          final notes = (booking['notes'] ?? '').toString().toLowerCase();
+          
+          return name.contains(searchQuery) ||
+                 email.contains(searchQuery) ||
+                 phone.contains(searchQuery) ||
+                 itemTitle.contains(searchQuery) ||
+                 itemType.contains(searchQuery) ||
+                 notes.contains(searchQuery);
+        }
+        
+        return true;
+      }
+      return false;
+    }).toList();
+    
+    return filtered;
+  }
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bookings',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search bookings by name, email, phone, item title...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _searchController,
+                    builder: (context, value, _) {
+                      return value.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : const SizedBox.shrink();
+                    },
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Filter by status: '),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('All'),
+                    selected: _filterStatus == 'all',
+                    onSelected: (_) => setState(() => _filterStatus = 'all'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Pending'),
+                    selected: _filterStatus == 'pending',
+                    onSelected: (_) => setState(() => _filterStatus = 'pending'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Confirmed'),
+                    selected: _filterStatus == 'confirmed',
+                    onSelected: (_) => setState(() => _filterStatus = 'confirmed'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Cancelled'),
+                    selected: _filterStatus == 'cancelled',
+                    onSelected: (_) => setState(() => _filterStatus = 'cancelled'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _filteredBookings.isEmpty
+              ? const Center(child: Text('No bookings found'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _filteredBookings.length,
+                  itemBuilder: (context, index) {
+                    final entry = _filteredBookings[index];
+                    final booking = Map<String, dynamic>.from(
+                      entry.value is Map
+                          ? (entry.value as Map).map((k, v) => MapEntry(k.toString(), v))
+                          : {},
+                    );
+                    return _BookingCard(
+                      id: entry.key,
+                      booking: booking,
+                      onStatusUpdate: (status) => _updateBookingStatus(entry.key, status),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// Helper function to show passport image dialog
+void _showPassportImageDialog(BuildContext context, String imageUrl, String personName) {
+  showDialog(
+    context: context,
+    builder: (context) => _PassportImageDialog(
+      imageUrl: imageUrl,
+      personName: personName,
+    ),
+  );
+}
+
+class _PassportImageDialog extends StatefulWidget {
+  final String imageUrl;
+  final String personName;
+
+  const _PassportImageDialog({
+    required this.imageUrl,
+    required this.personName,
+  });
+
+  @override
+  State<_PassportImageDialog> createState() => _PassportImageDialogState();
+}
+
+class _PassportImageDialogState extends State<_PassportImageDialog> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadImage() async {
+    setState(() {
+      _isDownloading = true;
+    });
+
+    try {
+      final fileName = '${_sanitizeFileName(widget.personName)}_passport.png';
+      final response = await http.get(Uri.parse(widget.imageUrl));
+      
+      if (response.statusCode == 200) {
+        final bytes = response.bodyBytes;
+        
+        if (kIsWeb) {
+          // Web download using the download utility
+          download_util.downloadFile(bytes, fileName);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Image download started!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          // Mobile - save to temporary directory
+          final tempDir = Directory.systemTemp;
+          final file = File('${tempDir.path}/$fileName');
+          await file.writeAsBytes(bytes);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Image saved to: ${file.path}\nYou can share or move it from there.'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      } else {
+        throw Exception('Failed to download image: HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
+  }
+
+  String _sanitizeFileName(String name) {
+    // Remove special characters and replace spaces with underscores
+    return name.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade700,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Passport Photo - ${widget.personName}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Image
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      widget.imageUrl,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error, color: Colors.red, size: 48),
+                              SizedBox(height: 8),
+                              Text('Failed to load image'),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Download Button
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isDownloading ? null : _downloadImage,
+                  icon: _isDownloading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.download),
+                  label: Text(_isDownloading ? 'Downloading...' : 'Download Image'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  final String id;
+  final Map<String, dynamic> booking;
+  final Function(String) onStatusUpdate;
+
+  const _BookingCard({
+    required this.id,
+    required this.booking,
+    required this.onStatusUpdate,
+  });
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = booking['status'] ?? 'pending';
+    final date = booking['date'] ?? 'N/A';
+    final itemTitle = booking['itemTitle'] ?? 'N/A';
+    final itemType = booking['itemType'] ?? 'N/A';
+    final name = booking['name'] ?? 'N/A';
+    final email = booking['email'] ?? 'N/A';
+    final phone = booking['phone'] ?? 'N/A';
+    final numberOfPeople = booking['numberOfPeople'] ?? 0;
+    final notes = booking['notes'] ?? '';
+    final timestamp = booking['timestamp'] ?? '';
+    // Check for both passportPhotoUrl and visaPhotoUrl
+    final passportPhotoUrl = booking['passportPhotoUrl'] ?? booking['visaPhotoUrl'];
+    final statusColor = _getStatusColor(status);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border(
+            left: BorderSide(
+              color: statusColor,
+              width: 4,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Section
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon based on item type
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getItemTypeColor(itemType).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _getItemTypeIcon(itemType),
+                      color: _getItemTypeColor(itemType),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          itemTitle,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.category,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              itemType.toUpperCase(),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              date,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Status Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Customer Information Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    _ModernInfoRow(
+                      icon: Icons.person,
+                      label: 'Customer',
+                      value: name,
+                      iconColor: Colors.blue,
+                    ),
+                    const SizedBox(height: 12),
+                    _ModernInfoRow(
+                      icon: Icons.email,
+                      label: 'Email',
+                      value: email,
+                      iconColor: Colors.orange,
+                    ),
+                    const SizedBox(height: 12),
+                    _ModernInfoRow(
+                      icon: Icons.phone,
+                      label: 'Phone',
+                      value: phone,
+                      iconColor: Colors.green,
+                    ),
+                    const SizedBox(height: 12),
+                    _ModernInfoRow(
+                      icon: Icons.people,
+                      label: 'People',
+                      value: numberOfPeople.toString(),
+                      iconColor: Colors.purple,
+                    ),
+                  ],
+                ),
+              ),
+              // Notes Section
+              if (notes.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.amber.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.note,
+                        color: Colors.amber.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Notes',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade900,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              notes,
+                              style: TextStyle(
+                                color: Colors.amber.shade900,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Passport Photo Section
+              if (passportPhotoUrl != null && (passportPhotoUrl as String).isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.blue.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.photo_library,
+                        color: Colors.blue.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Passport Photo:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => _showPassportImageDialog(context, passportPhotoUrl, name),
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.blue.shade300,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.shade200.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Stack(
+                              children: [
+                                Image.network(
+                                  passportPhotoUrl,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Center(
+                                      child: Icon(
+                                        Icons.error,
+                                        color: Colors.red.shade300,
+                                        size: 24,
+                                      ),
+                                    );
+                                  },
+                                ),
+                                // Overlay on hover/click
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.zoom_in,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // Timestamp
+              if (timestamp.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Booked on ${_formatTimestamp(timestamp)}',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Action Buttons
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.end,
+                children: [
+                  if (status != 'confirmed')
+                    _ActionButton(
+                      label: 'Confirm',
+                      icon: Icons.check_circle,
+                      color: Colors.green,
+                      onPressed: () => onStatusUpdate('confirmed'),
+                    ),
+                  if (status != 'cancelled')
+                    _ActionButton(
+                      label: 'Cancel',
+                      icon: Icons.cancel,
+                      color: Colors.red,
+                      onPressed: () => onStatusUpdate('cancelled'),
+                    ),
+                  if (status != 'pending')
+                    _ActionButton(
+                      label: 'Set Pending',
+                      icon: Icons.pending,
+                      color: Colors.orange,
+                      onPressed: () => onStatusUpdate('pending'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getItemTypeIcon(String itemType) {
+    switch (itemType.toLowerCase()) {
+      case 'visa':
+        return Icons.article;
+      case 'tour':
+        return Icons.flight;
+      case 'destination':
+        return Icons.location_on;
+      default:
+        return Icons.info;
+    }
+  }
+
+  Color _getItemTypeColor(String itemType) {
+    switch (itemType.toLowerCase()) {
+      case 'visa':
+        return Colors.purple;
+      case 'tour':
+        return Colors.blue;
+      case 'destination':
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatTimestamp(String timestamp) {
+    try {
+      final dt = DateTime.parse(timestamp);
+      return DateFormat('MMM dd, yyyy • hh:mm a').format(dt);
+    } catch (e) {
+      return timestamp;
+    }
+  }
+}
+
+class _ModernInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color iconColor;
+
+  const _ModernInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: iconColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        elevation: 2,
+      ),
+    );
+  }
+}
+
+// ==================== BANNERS/PROMOTIONS TAB ====================
+class BannersTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const BannersTab({super.key, required this.dbRef});
+
+  @override
+  State<BannersTab> createState() => _BannersTabState();
+}
+
+class _BannersTabState extends State<BannersTab> {
+  Map<String, dynamic> _banners = {};
+  bool _isLoading = true;
+  bool _showPromotions = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBanners();
+    _loadShowPromotionsSetting();
+    // Listen for real-time updates
+    widget.dbRef.child('banners').onValue.listen((event) {
+      if (mounted) {
+        if (event.snapshot.exists) {
+          setState(() {
+            final raw = event.snapshot.value;
+            if (raw is Map) {
+              _banners = Map<String, dynamic>.from(
+                raw.map((key, value) => MapEntry(key.toString(), value)),
+              );
+            }
+          });
+        } else {
+          setState(() {
+            _banners = {};
+          });
+        }
+      }
+    });
+    // Listen for show promotions setting
+    widget.dbRef.child('settings').child('showPromotions').onValue.listen((event) {
+      if (mounted) {
+        setState(() {
+          final value = event.snapshot.value;
+          _showPromotions = value is bool ? value : true;
+        });
+      }
+    });
+  }
+
+  Future<void> _loadBanners() async {
+    try {
+      final snapshot = await widget.dbRef.child('banners').get();
+      if (snapshot.exists) {
+        setState(() {
+          final raw = snapshot.value;
+          if (raw is Map) {
+            _banners = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading banners: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadShowPromotionsSetting() async {
+    try {
+      final snapshot = await widget.dbRef.child('settings').child('showPromotions').get();
+      if (snapshot.exists) {
+        setState(() {
+          final value = snapshot.value;
+          _showPromotions = value is bool ? value : true;
+        });
+      }
+    } catch (e) {
+      // Use default value
+    }
+  }
+
+  Future<void> _updateShowPromotions(bool value) async {
+    try {
+      await widget.dbRef.child('settings').child('showPromotions').set(value);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Promotions ${value ? 'enabled' : 'disabled'}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating setting: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteBanner(String id) async {
+    try {
+      await widget.dbRef.child('banners').child(id).remove();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Banner deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting banner: $e')),
+        );
+      }
+    }
+  }
+
+  void _showBannerDialog({String? id, Map<String, dynamic>? data}) {
+    final formKey = GlobalKey<FormState>();
+    final typeController = ValueNotifier<String>(data?['type'] ?? 'image');
+    final headingController = TextEditingController(text: data?['heading'] ?? '');
+    final subtextController = TextEditingController(text: data?['subtext'] ?? '');
+    final imageUrlController = TextEditingController(text: data?['imageUrl'] ?? '');
+    final selectedImage = ValueNotifier<_PickedImage?>(null);
+    final isUploading = ValueNotifier<bool>(false);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          id == null ? 'Add Banner' : 'Edit Banner',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Banner Type *',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          ValueListenableBuilder<String>(
+                            valueListenable: typeController,
+                            builder: (context, type, _) {
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: RadioListTile<String>(
+                                      title: const Text('Image'),
+                                      value: 'image',
+                                      groupValue: type,
+                                      onChanged: (value) {
+                                        typeController.value = value!;
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: RadioListTile<String>(
+                                      title: const Text('Text'),
+                                      value: 'text',
+                                      groupValue: type,
+                                      onChanged: (value) {
+                                        typeController.value = value!;
+                                        setDialogState(() {});
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          ValueListenableBuilder<String>(
+                            valueListenable: typeController,
+                            builder: (context, type, _) {
+                              if (type == 'image') {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    const Text(
+                                      'Banner Image *',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ValueListenableBuilder<_PickedImage?>(
+                                      valueListenable: selectedImage,
+                                      builder: (context, pickedImage, _) {
+                                        return ValueListenableBuilder<bool>(
+                                          valueListenable: isUploading,
+                                          builder: (context, uploading, _) {
+                                            return Column(
+                                              children: [
+                                                if (pickedImage != null || imageUrlController.text.isNotEmpty)
+                                                  Container(
+                                                    height: 200,
+                                                    margin: const EdgeInsets.only(bottom: 16),
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(color: Colors.grey),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: ClipRRect(
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      child: pickedImage != null
+                                                          ? (kIsWeb
+                                                              ? Image.memory(
+                                                                  pickedImage.bytes!,
+                                                                  fit: BoxFit.cover,
+                                                                )
+                                                              : Image.file(
+                                                                  pickedImage.file!,
+                                                                  fit: BoxFit.cover,
+                                                                ))
+                                                          : Image.network(
+                                                              imageUrlController.text,
+                                                              fit: BoxFit.cover,
+                                                              errorBuilder: (context, error, stackTrace) {
+                                                                return const Center(
+                                                                  child: Icon(Icons.error, size: 50),
+                                                                );
+                                                              },
+                                                            ),
+                                                    ),
+                                                  ),
+                                                ElevatedButton.icon(
+                                                  onPressed: uploading
+                                                      ? null
+                                                      : () async {
+                                                          final ImagePicker picker = ImagePicker();
+                                                          try {
+                                                            final XFile? pickedFile = await picker.pickImage(
+                                                              source: ImageSource.gallery,
+                                                            );
+                                                            if (pickedFile != null) {
+                                                              if (kIsWeb) {
+                                                                final bytes = await pickedFile.readAsBytes();
+                                                                selectedImage.value = _PickedImage(
+                                                                  bytes: bytes,
+                                                                  name: pickedFile.name,
+                                                                );
+                                                              } else {
+                                                                selectedImage.value = _PickedImage(
+                                                                  file: File(pickedFile.path),
+                                                                );
+                                                              }
+                                                              setDialogState(() {});
+                                                            }
+                                                          } catch (e) {
+                                                            if (mounted) {
+                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                SnackBar(content: Text('Error picking image: $e')),
+                                                              );
+                                                            }
+                                                          }
+                                                        },
+                                                  icon: const Icon(Icons.image),
+                                                  label: const Text('Pick Image'),
+                                                ),
+                                                if (imageUrlController.text.isNotEmpty)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(top: 8),
+                                                    child: TextField(
+                                                      controller: imageUrlController,
+                                                      decoration: const InputDecoration(
+                                                        labelText: 'Or enter image URL',
+                                                        border: OutlineInputBorder(),
+                                                      ),
+                                                      onChanged: (_) => setDialogState(() {}),
+                                                    ),
+                                                  ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    TextFormField(
+                                      controller: headingController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Heading Text *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextFormField(
+                                      controller: subtextController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Subtext *',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      maxLines: 3,
+                                      validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: isUploading,
+                            builder: (context, uploading, _) {
+                              return ElevatedButton(
+                                onPressed: uploading
+                                    ? null
+                                    : () async {
+                                        if (!formKey.currentState!.validate()) return;
+
+                                        final type = typeController.value;
+                                        if (type == 'image' &&
+                                            selectedImage.value == null &&
+                                            imageUrlController.text.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Please select an image or enter image URL'),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        isUploading.value = true;
+                                        setDialogState(() {});
+
+                                        try {
+                                          String? imageUrl = imageUrlController.text.isNotEmpty
+                                              ? imageUrlController.text
+                                              : null;
+
+                                          if (type == 'image' && selectedImage.value != null) {
+                                            if (kIsWeb) {
+                                              imageUrl = await CloudinaryService.uploadImageFromBytes(
+                                                selectedImage.value!.bytes!,
+                                                selectedImage.value!.name ?? 'banner.jpg',
+                                                folder: 'banners',
+                                              );
+                                            } else {
+                                              imageUrl = await CloudinaryService.uploadImage(
+                                                selectedImage.value!.file!,
+                                                folder: 'banners',
+                                              );
+                                            }
+                                          }
+
+                                          final bannerData = {
+                                            'type': type,
+                                            if (type == 'image') 'imageUrl': imageUrl,
+                                            if (type == 'text') ...{
+                                              'heading': headingController.text,
+                                              'subtext': subtextController.text,
+                                            },
+                                            'createdAt': DateTime.now().toIso8601String(),
+                                          };
+
+                                          if (id == null) {
+                                            await widget.dbRef.child('banners').push().set(bannerData);
+                                          } else {
+                                            await widget.dbRef.child('banners').child(id).update(bannerData);
+                                          }
+
+                                          if (mounted) {
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(id == null ? 'Banner added' : 'Banner updated'),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Error saving banner: $e')),
+                                            );
+                                          }
+                                        } finally {
+                                          isUploading.value = false;
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                ),
+                                child: uploading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : Text(id == null ? 'Add Banner' : 'Update Banner'),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Banners/Promotions',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      const Text('Show Promotions: '),
+                      Switch(
+                        value: _showPromotions,
+                        onChanged: _updateShowPromotions,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _showBannerDialog(),
+                icon: const Icon(Icons.add),
+                label: const Text('Add New Banner'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _banners.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.campaign, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No banners yet',
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Click "Add New Banner" to create one',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _banners.length,
+                  itemBuilder: (context, index) {
+                    final entry = _banners.entries.elementAt(index);
+                    final id = entry.key;
+                    final banner = Map<String, dynamic>.from(
+                      entry.value is Map
+                          ? (entry.value as Map).map((k, v) => MapEntry(k.toString(), v))
+                          : {},
+                    );
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: banner['type'] == 'image'
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  banner['imageUrl'] ?? '',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 80,
+                                      height: 80,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.image),
+                                    );
+                                  },
+                                ),
+                              )
+                            : Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.text_fields, size: 40),
+                              ),
+                        title: Text(
+                          banner['type'] == 'image'
+                              ? 'Image Banner'
+                              : banner['heading'] ?? 'Text Banner',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Type: ${banner['type']}'),
+                            if (banner['type'] == 'text')
+                              Text('Subtext: ${banner['subtext'] ?? ''}'),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => _showBannerDialog(id: id, data: banner),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Banner'),
+                                    content: const Text('Are you sure you want to delete this banner?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                          _deleteBanner(id);
+                                        },
+                                        child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}

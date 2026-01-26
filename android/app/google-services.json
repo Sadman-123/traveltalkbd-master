@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "754718364327",
+    "firebase_url": "https://travel-talk-bd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "travel-talk-bd",
+    "storage_bucket": "travel-talk-bd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:754718364327:android:90fce3e3e325417a830182",
+        "android_client_info": {
+          "package_name": "com.example.traveltalkbd"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAicdURuQGlqChSY8EFUEZyFF9z7MMY95k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
