@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/web_related/components/web_booking_dialog.dart';
 
@@ -35,15 +36,8 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
          flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+    decoration:  BoxDecoration(
+      gradient: Traveltalktheme.primaryGradient
     ),
   ),
         title: Text(

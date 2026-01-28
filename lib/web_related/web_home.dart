@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:traveltalkbd/app_splash_gate.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/web_related/components/web_home_search.dart';
 import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
@@ -52,15 +53,8 @@ class _WebHomeState extends State<WebHome> {
       child: Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+    decoration:  BoxDecoration(
+     gradient: Traveltalktheme.primaryGradient
     ),
   ),
         title:  GestureDetector(

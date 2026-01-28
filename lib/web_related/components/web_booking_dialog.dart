@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'dart:typed_data';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:traveltalkbd/web_related/data/booking_service.dart';
@@ -257,7 +258,7 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.blue.shade700,
+                gradient: Traveltalktheme.primaryGradient,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),

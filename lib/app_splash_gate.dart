@@ -131,9 +131,9 @@ class _SplashView extends StatelessWidget {
                 child: ScaleTransition(
                   scale: scale,
                   child: Image.asset(
-                    'assets/trv.png',
-                    width: 240,
-                    height: 240,
+                    'assets/trv2.png',
+                    width: 140,
+                    height: 140,
                     fit: BoxFit.contain,
                   ),
                 ),

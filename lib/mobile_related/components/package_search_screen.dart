@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/mobile_related/travel_detail_screen.dart';
@@ -102,15 +103,8 @@ class _PackageSearchScreenState extends State<PackageSearchScreen> {
     return Scaffold(
       appBar: AppBar(
          flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+    decoration:  BoxDecoration(
+      gradient: Traveltalktheme.primaryGradient
     ),
   ),
         title: const Text('Search Packages'),

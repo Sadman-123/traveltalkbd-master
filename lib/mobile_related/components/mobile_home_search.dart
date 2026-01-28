@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/components/package_search_screen.dart';
 import 'package:traveltalkbd/services/banner_service.dart' as banner_service;
 
@@ -202,14 +203,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
             padding: const EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
               gradient: _isTourPackages
-                  ? const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Color(0xFF4A1E6A), // purple
-                        Color(0xFFE10098), // pink
-                      ],
-                    )
+                  ? Traveltalktheme.primaryGradient
                   : null,
               color: !_isTourPackages ? Colors.transparent : null,
               borderRadius: BorderRadius.circular(15),
@@ -239,14 +233,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
             padding: const EdgeInsets.symmetric(vertical: 15),
             decoration: BoxDecoration(
               gradient: !_isTourPackages
-                  ? const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Color(0xFF4A1E6A), // purple
-                        Color(0xFFE10098), // pink
-                      ],
-                    )
+                  ? Traveltalktheme.primaryGradient
                   : null,
               color: _isTourPackages ? Colors.transparent : null,
               borderRadius: BorderRadius.circular(15),
@@ -387,14 +374,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
                       width: double.infinity,
                       height: 120,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+                        gradient: Traveltalktheme.primaryGradient
                       ),
                       child: const Center(
                         child: Icon(Icons.error, color: Colors.white, size: 32),
@@ -406,14 +386,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
                   width: double.infinity,
                   height: 120,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+                    gradient: Traveltalktheme.primaryGradient
                   ),
                   child: const Center(
                     child: Icon(Icons.image, color: Colors.white, size: 32),
@@ -425,14 +398,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+          gradient: Traveltalktheme.primaryGradient,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(

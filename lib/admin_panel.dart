@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:traveltalkbd/app_splash_gate.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:http/http.dart' as http;
 
@@ -59,15 +60,8 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       child: Scaffold(
       appBar: AppBar(
          flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+    decoration:  BoxDecoration(
+     gradient: Traveltalktheme.primaryGradient
     ),
   ),
         title: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,),

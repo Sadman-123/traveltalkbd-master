@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:traveltalkbd/app_splash_gate.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/components/mobile_home_about.dart';
 import 'package:traveltalkbd/mobile_related/components/mobile_home_destinition.dart';
 import 'package:traveltalkbd/mobile_related/components/mobile_home_packages.dart';
@@ -20,15 +21,8 @@ class _MobileHomeState extends State<MobileHome> {
       child: Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+    decoration:  BoxDecoration(
+      gradient:Traveltalktheme.primaryGradient
     ),
   ),
           //child: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,)
@@ -45,15 +39,8 @@ class _MobileHomeState extends State<MobileHome> {
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFF4A1E6A), // purple
-              Color(0xFFE10098), // pink
-            ],
-          ),
+        decoration:  BoxDecoration(
+          gradient: Traveltalktheme.primaryGradient
         ),
         child: NavigationBar(
           backgroundColor: Colors.transparent, // IMPORTANT

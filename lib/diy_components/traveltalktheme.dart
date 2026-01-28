@@ -76,4 +76,14 @@ class Traveltalktheme {
 
       );
   }
+  static LinearGradient get primaryGradient {
+    return LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          Color(0xFF4A1E6A), // purple
+          Color(0xFFE10098), // pink
+        ],
+      );
+  }
 }
