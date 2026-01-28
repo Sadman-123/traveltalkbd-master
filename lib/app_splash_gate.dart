@@ -1,15 +1,13 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-/// Shows an animated splash (logo rises + bounce) until [loadFuture] completes,
-/// then reveals [child].
+/// Shows an animated splash (logo drops from top + subtle bounce)
+/// until [loadFuture] completes, then reveals [child].
 class AppSplashGate extends StatefulWidget {
   final Future<void> loadFuture;
   final Widget child;
 
-  /// Ensures the splash is visible for at least this duration (prevents flicker
-  /// when data is cached and loads instantly).
+  /// Ensures the splash is visible for at least this duration
   final Duration minDisplayDuration;
 
   const AppSplashGate({
@@ -26,7 +24,7 @@ class AppSplashGate extends StatefulWidget {
 class _AppSplashGateState extends State<AppSplashGate>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _rise;
+  late final Animation<double> _drop;
   late final Animation<double> _scale;
   late final Animation<double> _fade;
 
@@ -41,10 +39,11 @@ class _AppSplashGateState extends State<AppSplashGate>
       duration: const Duration(milliseconds: 1100),
     );
 
-    // 0 -> 1 (with a small overshoot due to easeOutBack).
-    // We'll convert this progress into a pixel-translate so the logo always
-    // moves "from down to center" regardless of its own size.
-    _rise = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    // Top → Center drop animation
+    _drop = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
 
     _scale = Tween<double>(begin: 0.92, end: 1.0).animate(
       CurvedAnimation(
@@ -62,7 +61,8 @@ class _AppSplashGateState extends State<AppSplashGate>
 
     _controller.forward();
 
-    _gateFuture = _combineFutures(widget.loadFuture, widget.minDisplayDuration);
+    _gateFuture =
+        _combineFutures(widget.loadFuture, widget.minDisplayDuration);
   }
 
   @override
@@ -71,7 +71,8 @@ class _AppSplashGateState extends State<AppSplashGate>
     super.dispose();
   }
 
-  Future<void> _combineFutures(Future<void> load, Duration minDuration) async {
+  Future<void> _combineFutures(
+      Future<void> load, Duration minDuration) async {
     final start = DateTime.now();
     await load;
     final elapsed = DateTime.now().difference(start);
@@ -91,7 +92,7 @@ class _AppSplashGateState extends State<AppSplashGate>
           duration: const Duration(milliseconds: 350),
           switchInCurve: Curves.easeOut,
           switchOutCurve: Curves.easeIn,
-          child: ready ? widget.child : _SplashView(_rise, _scale, _fade),
+          child: ready ? widget.child : _SplashView(_drop, _scale, _fade),
         );
       },
     );
@@ -99,34 +100,33 @@ class _AppSplashGateState extends State<AppSplashGate>
 }
 
 class _SplashView extends StatelessWidget {
-  final Animation<double> rise;
+  final Animation<double> drop;
   final Animation<double> scale;
   final Animation<double> fade;
 
-  const _SplashView(this.rise, this.scale, this.fade);
+  const _SplashView(this.drop, this.scale, this.fade);
 
   @override
   Widget build(BuildContext context) {
-    // Match your app vibe but keep it neutral; logo is the focus.
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FB),
       body: Center(
         child: FadeTransition(
           opacity: fade,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // How far below center the logo starts (pixels).
-              // Feel free to tune this number (0.40 - 0.55 are common).
-              final startY = constraints.maxHeight * 0.45;
+              // Start ABOVE the center
+              final startY = -constraints.maxHeight * 0.45;
 
               return AnimatedBuilder(
-                animation: rise,
+                animation: drop,
                 builder: (context, child) {
-                  // When rise=0 => y = startY (below center)
-                  // When rise=1 => y = 0 (exact center)
-                  // With overshoot => y becomes slightly negative (bounce)
-                  final y = (1 - rise.value) * startY;
-                  return Transform.translate(offset: Offset(0, y), child: child);
+                  // drop=0 → above center
+                  // drop=1 → center (with small overshoot)
+                  final y = (1 - drop.value) * startY;
+                  return Transform.translate(
+                    offset: Offset(0, y),
+                    child: child,
+                  );
                 },
                 child: ScaleTransition(
                   scale: scale,
