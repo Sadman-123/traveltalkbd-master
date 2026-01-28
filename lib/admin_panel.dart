@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
+import 'package:traveltalkbd/app_splash_gate.dart';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:http/http.dart' as http;
 
@@ -33,11 +35,15 @@ class AdminPanel extends StatefulWidget {
 class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  late final Future<void> _preloadFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
+    // Preload the whole database snapshot once so the splash stays
+    // until Firebase data is ready.
+    _preloadFuture = FirebaseDatabase.instance.ref().get().then((_) {});
   }
 
   @override
@@ -48,7 +54,9 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppSplashGate(
+      loadFuture: _preloadFuture,
+      child: Scaffold(
       appBar: AppBar(
          flexibleSpace: Container(
     decoration: const BoxDecoration(
@@ -62,7 +70,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       ),
     ),
   ),
-        title: Image.asset('assets/logo.png',height: 150,width: 150,),
+        title: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,),
         bottom: TabBar(
           labelColor: Colors.white,
           unselectedLabelColor: Colors.black,
@@ -88,6 +96,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           BannersTab(dbRef: _dbRef),
           AboutUsTab(dbRef: _dbRef),
         ],
+      ),
       ),
     );
   }

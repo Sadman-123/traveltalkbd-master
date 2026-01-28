@@ -198,7 +198,7 @@ class WebHomePackages extends StatelessWidget {
   }
 }
 
-class _PackageCard extends StatelessWidget {
+class _PackageCard extends StatefulWidget {
   final String imageUrl;
   final String title;
   final String subtitle;
@@ -216,107 +216,146 @@ class _PackageCard extends StatelessWidget {
   });
 
   @override
+  State<_PackageCard> createState() => _PackageCardState();
+}
+
+class _PackageCardState extends State<_PackageCard> {
+  static const _hoverGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF4A1E6A), // purple
+      Color(0xFFE10098), // pink
+    ],
+  );
+
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
+    final titleColor = _hovered ? Colors.white : Colors.black87;
+    final subtitleColor = _hovered ? Colors.white70 : Colors.grey.shade600;
+    final priceColor = _hovered ? Colors.white : Colors.blue.shade700;
+    final badgeBg = _hovered ? Colors.white.withOpacity(0.18) : Colors.blue.shade50;
+    final badgeBorder =
+        _hovered ? Border.all(color: Colors.white.withOpacity(0.25)) : null;
+    final badgeTextColor = _hovered ? Colors.white : Colors.blue.shade700;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        child: Material(
+          elevation: _hovered ? 10 : 4,
           borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 11,
-              child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
-                        return Container(
-                          color: Colors.grey.shade200,
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 48,
-                            color: Colors.grey,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: widget.onTap,
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: _hovered ? _hoverGradient : null,
+                color: _hovered ? null : Colors.white,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 11,
+                    child: widget.imageUrl.isNotEmpty
+                        ? Image.network(
+                            widget.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) {
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
                           ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.grey,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: badgeBorder,
+                            ),
+                            child: Text(
+                              widget.badge,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: badgeTextColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Flexible(
+                            child: Text(
+                              widget.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: titleColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Flexible(
+                            child: Text(
+                              widget.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: subtitleColor,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            widget.priceText,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: priceColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        badge,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Flexible(
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      priceText,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

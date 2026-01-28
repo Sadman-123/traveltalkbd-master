@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:traveltalkbd/app_splash_gate.dart';
+import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/web_related/components/web_home_search.dart';
 import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
 import 'package:traveltalkbd/web_related/components/web_home_packages.dart';
@@ -14,6 +17,9 @@ class _WebHomeState extends State<WebHome> {
   final GlobalKey _homeKey = GlobalKey();
   final GlobalKey _destinationsKey = GlobalKey();
   final GlobalKey _packagesKey = GlobalKey();
+
+  late final Future<void> _preloadFuture =
+      TravelDataService.getContent().then((_) {});
 
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
@@ -41,7 +47,9 @@ class _WebHomeState extends State<WebHome> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppSplashGate(
+      loadFuture: _preloadFuture,
+      child: Scaffold(
       appBar: AppBar(
         flexibleSpace: Container(
     decoration: const BoxDecoration(
@@ -66,7 +74,7 @@ class _WebHomeState extends State<WebHome> {
           //     fontSize: 24,
           //   ),
           // ),
-          child: Image.asset('assets/logo.png',height: 150,width: 150,),
+          child: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,)
         ),
         elevation: 0,
         actions: [
@@ -126,6 +134,7 @@ class _WebHomeState extends State<WebHome> {
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -11,11 +11,8 @@ class WebHomeDestinition extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 40),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF0C1631), Color(0xFF0F1F3D)],
-        ),
+  color: Color(0xFFFBEFEF)
+
       ),
       child: FutureBuilder<TravelContent>(
         future: TravelDataService.getContent(),
@@ -66,7 +63,7 @@ class WebHomeDestinition extends StatelessWidget {
                 const Text(
                   'Top Destinations',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 42,
                     fontWeight: FontWeight.bold,
                   ),
@@ -75,7 +72,7 @@ class WebHomeDestinition extends StatelessWidget {
                 const Text(
                   'Explore curated places to visit around the world',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Colors.black54,
                     fontSize: 18,
                   ),
                 ),
@@ -140,7 +137,7 @@ class WebHomeDestinition extends StatelessWidget {
   }
 }
 
-class _DestinationCard extends StatelessWidget {
+class _DestinationCard extends StatefulWidget {
   final Destination destination;
   final VoidCallback onTap;
 
@@ -150,103 +147,142 @@ class _DestinationCard extends StatelessWidget {
   });
 
   @override
+  State<_DestinationCard> createState() => _DestinationCardState();
+}
+
+class _DestinationCardState extends State<_DestinationCard> {
+  static const _hoverGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF4A1E6A), // purple
+      Color(0xFFE10098), // pink
+    ],
+  );
+
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+    final dest = widget.destination;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(_hovered ? 0.42 : 0.3),
+                  blurRadius: _hovered ? 28 : 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildBackgroundImage(destination.photo),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.05),
-                      Colors.black.withOpacity(0.7),
-                    ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildBackgroundImage(dest.photo),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.05),
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: _priceChip(),
-              ),
-              Positioned(
-                top: 16,
-                left: 16,
-                child: _badge(
-                  destination.bestTimeToVisit.isNotEmpty
-                      ? destination.bestTimeToVisit
-                      : 'Anytime',
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        opacity: _hovered ? 0.55 : 0.0,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: _hoverGradient,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: _priceChip(),
+                  ),
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: _badge(
+                      dest.bestTimeToVisit.isNotEmpty ? dest.bestTimeToVisit : 'Anytime',
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.place, color: Colors.white, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${destination.name}, ${destination.country}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            children: [
+                              const Icon(Icons.place, color: Colors.white, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '${dest.name}, ${dest.country}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            dest.shortDescription,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: dest.popularFor.take(3).map((tag) {
+                              return _badge(tag, subtle: true);
+                            }).toList(),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        destination.shortDescription,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: destination.popularFor.take(3).map((tag) {
-                          return _badge(tag, subtle: true);
-                        }).toList(),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -307,6 +343,7 @@ class _DestinationCard extends StatelessWidget {
   }
 
   Widget _priceChip() {
+    final destination = widget.destination;
     final priceLabel =
         '${destination.currency} ${destination.startingPrice.toStringAsFixed(0)}';
     return Container(

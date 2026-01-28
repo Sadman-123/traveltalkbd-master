@@ -128,7 +128,7 @@ Widget _buildGrid({
   );
 }
 
-class _PackageCard extends StatelessWidget {
+class _PackageCard extends StatefulWidget {
   final String imageUrl;
   final String title;
   final String subtitle;
@@ -146,88 +146,127 @@ class _PackageCard extends StatelessWidget {
   });
 
   @override
+  State<_PackageCard> createState() => _PackageCardState();
+}
+
+class _PackageCardState extends State<_PackageCard> {
+  static const _hoverGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF4A1E6A), // purple
+      Color(0xFFE10098), // pink
+    ],
+  );
+
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Card(
+    final titleColor = _hovered ? Colors.white : Colors.black87;
+    final subtitleColor = _hovered ? Colors.white70 : Colors.grey.shade600;
+    final priceColor = _hovered ? Colors.white : Colors.blue;
+    final badgeBg = _hovered ? Colors.white.withOpacity(0.18) : Colors.blue.shade50;
+    final badgeBorder =
+        _hovered ? Border.all(color: Colors.white.withOpacity(0.25)) : null;
+    final badgeTextColor = _hovered ? Colors.white : Colors.blue;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Material(
+        elevation: _hovered ? 8 : 2,
+        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 11,
-              child: imageUrl.isNotEmpty
-                  ? Image.network(imageUrl, fit: BoxFit.cover)
-                  : Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.image_not_supported),
-                    ),
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: _hovered ? _hoverGradient : null,
+              color: _hovered ? null : Colors.white,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        badge,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w600,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 11,
+                  child: widget.imageUrl.isNotEmpty
+                      ? Image.network(widget.imageUrl, fit: BoxFit.cover)
+                      : Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image_not_supported),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Flexible(
-                      child: Text(
-                        title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Flexible(
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Flexible(
-                      child: Text(
-                        priceText,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
-              ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeBg,
+                            borderRadius: BorderRadius.circular(8),
+                            border: badgeBorder,
+                          ),
+                          child: Text(
+                            widget.badge,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: badgeTextColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Flexible(
+                          child: Text(
+                            widget.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: titleColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Flexible(
+                          child: Text(
+                            widget.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: subtitleColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Flexible(
+                          child: Text(
+                            widget.priceText,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: priceColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

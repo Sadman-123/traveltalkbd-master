@@ -105,7 +105,7 @@ class MobileHomeDestinition extends StatelessWidget {
   }
 }
 
-class _DestinationCard extends StatelessWidget {
+class _DestinationCard extends StatefulWidget {
   final Destination destination;
   final VoidCallback onTap;
 
@@ -115,97 +115,138 @@ class _DestinationCard extends StatelessWidget {
   });
 
   @override
+  State<_DestinationCard> createState() => _DestinationCardState();
+}
+
+class _DestinationCardState extends State<_DestinationCard> {
+  static const _hoverGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF4A1E6A), // purple
+      Color(0xFFE10098), // pink
+    ],
+  );
+
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 20,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _buildBackgroundImage(destination.photo),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.05),
-                      Colors.black.withOpacity(0.6),
-                    ],
-                  ),
+    final dest = widget.destination;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(_hovered ? 0.32 : 0.25),
+                  blurRadius: _hovered ? 26 : 20,
+                  offset: const Offset(0, 12),
                 ),
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: _priceChip(),
-              ),
-              Positioned(
-                top: 16,
-                left: 16,
-                child: _badge(destination.bestTimeToVisit.isNotEmpty
-                    ? destination.bestTimeToVisit
-                    : 'Anytime'),
-              ),
-              Positioned(
-                bottom: 16,
-                left: 16,
-                right: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.place, color: Colors.white, size: 18),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${destination.name}, ${destination.country}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildBackgroundImage(dest.photo),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.05),
+                          Colors.black.withOpacity(0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        opacity: _hovered ? 0.55 : 0.0,
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: _hoverGradient,
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: _priceChip(),
+                  ),
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    child: _badge(dest.bestTimeToVisit.isNotEmpty
+                        ? dest.bestTimeToVisit
+                        : 'Anytime'),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.place, color: Colors.white, size: 18),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${dest.name}, ${dest.country}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          dest.shortDescription,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: dest.popularFor.take(3).map((tag) {
+                            return _badge(tag, subtle: true);
+                          }).toList(),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      destination.shortDescription,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: destination.popularFor.take(3).map((tag) {
-                        return _badge(tag, subtle: true);
-                      }).toList(),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -266,6 +307,7 @@ class _DestinationCard extends StatelessWidget {
   }
 
   Widget _priceChip() {
+    final destination = widget.destination;
     final priceLabel =
         '${destination.currency} ${destination.startingPrice.toStringAsFixed(0)}';
     return Container(
