@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_svg/svg.dart';
@@ -9,6 +10,7 @@ import 'dart:typed_data';
 import 'package:traveltalkbd/app_splash_gate.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
+import 'package:traveltalkbd/services/home_settings_service.dart';
 import 'package:http/http.dart' as http;
 
 // Conditional import for download functionality
@@ -41,7 +43,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     // Preload the whole database snapshot once so the splash stays
     // until Firebase data is ready.
     _preloadFuture = FirebaseDatabase.instance.ref().get().then((_) {});
@@ -71,6 +73,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           controller: _tabController,
           isScrollable: true,
           tabs: const [
+            Tab(icon: Icon(Icons.home), text: 'Home'),
             Tab(icon: Icon(Icons.location_on), text: 'Destinations'),
             Tab(icon: Icon(Icons.flight), text: 'Tour Packages'),
             Tab(icon: Icon(Icons.article), text: 'Visa Packages'),
@@ -83,6 +86,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
       body: TabBarView(
         controller: _tabController,
         children: [
+          HomeTab(dbRef: _dbRef),
           DestinationsTab(dbRef: _dbRef),
           TourPackagesTab(dbRef: _dbRef),
           VisaPackagesTab(dbRef: _dbRef),
@@ -91,6 +95,384 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           AboutUsTab(dbRef: _dbRef),
         ],
       ),
+      ),
+    );
+  }
+}
+
+// ==================== HOME TAB ====================
+class HomeTab extends StatefulWidget {
+  final DatabaseReference dbRef;
+  const HomeTab({super.key, required this.dbRef});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  List<String> _slogans = [];
+  String _backgroundImage = '';
+  bool _isLoading = true;
+  final TextEditingController _backgroundImageController = TextEditingController();
+  final List<TextEditingController> _sloganControllers = [];
+  final selectedImage = ValueNotifier<_PickedImage?>(null);
+  final isUploading = ValueNotifier<bool>(false);
+  StreamSubscription<DatabaseEvent>? _homeSettingsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHomeSettings();
+    // Listen for real-time updates
+    _homeSettingsSub = widget.dbRef.child('home_settings').onValue.listen((event) {
+      if (mounted && event.snapshot.exists) {
+        _loadHomeSettings();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _homeSettingsSub?.cancel();
+    _backgroundImageController.dispose();
+    for (var controller in _sloganControllers) {
+      controller.dispose();
+    }
+    selectedImage.dispose();
+    isUploading.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadHomeSettings() async {
+    try {
+      final slogans = await HomeSettingsService.getSlogans();
+      final backgroundImage = await HomeSettingsService.getBackgroundImage();
+      
+      if (mounted) {
+        setState(() {
+          _slogans = slogans;
+          _backgroundImage = backgroundImage;
+          _backgroundImageController.text = backgroundImage;
+          _isLoading = false;
+          
+          // Dispose old controllers
+          for (var controller in _sloganControllers) {
+            controller.dispose();
+          }
+          _sloganControllers.clear();
+          
+          // Create new controllers for slogans
+          for (var slogan in _slogans) {
+            _sloganControllers.add(TextEditingController(text: slogan));
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading home settings: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveSlogans() async {
+    try {
+      final slogans = _sloganControllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList();
+      if (slogans.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add at least one slogan')),
+        );
+        return;
+      }
+      await HomeSettingsService.saveSlogans(slogans);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Slogans saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving slogans: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveBackgroundImage() async {
+    try {
+      String imageUrl = _backgroundImageController.text.trim();
+      
+      // If an image was picked, upload it first
+      if (selectedImage.value != null) {
+        isUploading.value = true;
+        try {
+          if (kIsWeb && selectedImage.value!.bytes != null) {
+            imageUrl = await CloudinaryService.uploadImageFromBytes(
+              selectedImage.value!.bytes!,
+              selectedImage.value!.name ?? 'home_bg_${DateTime.now().millisecondsSinceEpoch}',
+              folder: 'home',
+            );
+          } else if (selectedImage.value!.file != null) {
+            imageUrl = await CloudinaryService.uploadImage(
+              selectedImage.value!.file!,
+              folder: 'home',
+            );
+          }
+          
+          if (imageUrl.isEmpty) {
+            throw Exception('Failed to upload image');
+          }
+          
+          selectedImage.value = null;
+        } finally {
+          isUploading.value = false;
+        }
+      }
+      
+      if (imageUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please provide a background image URL or upload an image')),
+        );
+        return;
+      }
+      
+      await HomeSettingsService.saveBackgroundImage(imageUrl);
+      if (mounted) {
+        setState(() {
+          _backgroundImage = imageUrl;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Background image saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving background image: $e')),
+        );
+      }
+    }
+  }
+
+  void _addSlogan() {
+    setState(() {
+      _sloganControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeSlogan(int index) {
+    if (index < _sloganControllers.length) {
+      _sloganControllers[index].dispose();
+      setState(() {
+        _sloganControllers.removeAt(index);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Background Image Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Background Image',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  // Preview
+                  if (_backgroundImage.isNotEmpty)
+                    Container(
+                      height: 200,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _backgroundImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(Icons.error, size: 48),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  // Image Upload or URL Input
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _backgroundImageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Background Image URL',
+                            hintText: 'Enter image URL or upload image',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ValueListenableBuilder<_PickedImage?>(
+                        valueListenable: selectedImage,
+                        builder: (context, image, _) {
+                          return Column(
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final picker = ImagePicker();
+                                  _PickedImage? picked;
+                                  if (kIsWeb) {
+                                    final result = await picker.pickImage(source: ImageSource.gallery);
+                                    if (result != null) {
+                                      final bytes = await result.readAsBytes();
+                                      picked = _PickedImage(bytes: bytes, name: result.name);
+                                    }
+                                  } else {
+                                    final result = await picker.pickImage(source: ImageSource.gallery);
+                                    if (result != null) {
+                                      picked = _PickedImage(file: File(result.path));
+                                    }
+                                  }
+                                  if (picked != null) {
+                                    selectedImage.value = picked;
+                                  }
+                                },
+                                icon: const Icon(Icons.upload),
+                                label: const Text('Upload'),
+                              ),
+                              if (image != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 50,
+                                        height: 50,
+                                        child: kIsWeb && image.bytes != null
+                                            ? Image.memory(image.bytes!, fit: BoxFit.cover)
+                                            : image.file != null
+                                                ? Image.file(image.file!, fit: BoxFit.cover)
+                                                : const Icon(Icons.image),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close, size: 20),
+                                        onPressed: () => selectedImage.value = null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isUploading,
+                    builder: (context, uploading, _) {
+                      return ElevatedButton(
+                        onPressed: uploading ? null : _saveBackgroundImage,
+                        child: uploading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Save Background Image'),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Slogans Section
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Slogans',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _addSlogan,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Slogan'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (_sloganControllers.isEmpty)
+                    const Text('No slogans added yet. Click "Add Slogan" to add one.')
+                  else
+                    ..._sloganControllers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final controller = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: controller,
+                                decoration: InputDecoration(
+                                  labelText: 'Slogan ${index + 1}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _removeSlogan(index),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _saveSlogans,
+                    child: const Text('Save Slogans'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

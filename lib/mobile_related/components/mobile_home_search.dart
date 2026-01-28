@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/components/package_search_screen.dart';
 import 'package:traveltalkbd/services/banner_service.dart' as banner_service;
+import 'package:traveltalkbd/services/home_settings_service.dart';
 
 class MobileHomeSearch extends StatefulWidget {
   const MobileHomeSearch({
@@ -23,24 +24,48 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
   Timer? _bannerTimer;
   final PageController _bannerPageController = PageController();
 
-  final List<String> _slogans = [
+  List<String> _slogans = [
     "Discover Your Next Adventure",
     "Travel Beyond Imagination",
     "Create Memories That Last Forever",
     "Your Journey Starts Here",
     "Explore the World with Us",
   ];
+  String _backgroundImage = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800';
 
   @override
   void initState() {
     super.initState();
-    _startSloganRotation();
+    _loadHomeSettings();
     _loadBanners();
   }
 
-  void _startSloganRotation() {
-    _sloganTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+  Future<void> _loadHomeSettings() async {
+    try {
+      final slogans = await HomeSettingsService.getSlogans();
+      final backgroundImage = await HomeSettingsService.getBackgroundImage();
       if (mounted) {
+        setState(() {
+          _slogans = slogans;
+          _backgroundImage = backgroundImage;
+        });
+        if (_slogans.isNotEmpty) {
+          _startSloganRotation();
+        }
+      }
+    } catch (e) {
+      // Use default values on error
+      if (mounted && _slogans.isNotEmpty) {
+        _startSloganRotation();
+      }
+    }
+  }
+
+  void _startSloganRotation() {
+    if (_slogans.isEmpty) return;
+    _sloganTimer?.cancel();
+    _sloganTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (mounted && _slogans.isNotEmpty) {
         setState(() {
           _currentSloganIndex = (_currentSloganIndex + 1) % _slogans.length;
         });
@@ -99,9 +124,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: NetworkImage(
-                  'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800',
-                ),
+                image: NetworkImage(_backgroundImage),
                 fit: BoxFit.cover,
               ),
             ),
@@ -139,29 +162,30 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
                 const SizedBox(height: 40),
                 
                 // Animated Slogan
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  child: Padding(
-                    key: ValueKey<int>(_currentSloganIndex),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      _slogans[_currentSloganIndex],
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            offset: Offset(0, 2),
-                            blurRadius: 4,
-                            color: Colors.black45,
-                          ),
-                        ],
+                if (_slogans.isNotEmpty)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    child: Padding(
+                      key: ValueKey<int>(_currentSloganIndex),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        _slogans[_currentSloganIndex % _slogans.length],
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0, 2),
+                              blurRadius: 4,
+                              color: Colors.black45,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
                 
                 const SizedBox(height: 50),
                 
