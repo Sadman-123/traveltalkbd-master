@@ -10,6 +10,8 @@ class TourPackage {
   final String photo; // First photo (for backward compatibility)
   final List<String> photos; // All photos
   final bool available;
+  final bool discountEnabled;
+  final num discountAmount;
 
   TourPackage({
     required this.id,
@@ -23,7 +25,11 @@ class TourPackage {
     required this.photo,
     required this.photos,
     required this.available,
+    this.discountEnabled = false,
+    this.discountAmount = 0,
   });
+
+  num get discountedPrice => discountEnabled ? (price - discountAmount).clamp(0, double.infinity) : price;
 
   factory TourPackage.fromMap(String id, Map<String, dynamic> map) {
     // Handle photo as either String or List<String>
@@ -54,6 +60,8 @@ class TourPackage {
       photo: firstPhoto,
       photos: photosList,
       available: map['available'] ?? false,
+      discountEnabled: map['discountEnabled'] ?? false,
+      discountAmount: map['discountAmount'] ?? 0,
     );
   }
 }
@@ -71,6 +79,8 @@ class VisaPackage {
   final List<String> photos; // All photos
   final List<String> requiredDocuments;
   final bool available;
+  final bool discountEnabled;
+  final num discountAmount;
 
   VisaPackage({
     required this.id,
@@ -85,7 +95,11 @@ class VisaPackage {
     required this.photos,
     required this.requiredDocuments,
     required this.available,
+    this.discountEnabled = false,
+    this.discountAmount = 0,
   });
+
+  num get discountedPrice => discountEnabled ? (price - discountAmount).clamp(0, double.infinity) : price;
 
   factory VisaPackage.fromMap(String id, Map<String, dynamic> map) {
     // Handle photo as either String or List<String>
@@ -117,6 +131,8 @@ class VisaPackage {
       photos: photosList,
       requiredDocuments: List<String>.from(map['requiredDocuments'] ?? const []),
       available: map['available'] ?? false,
+      discountEnabled: map['discountEnabled'] ?? false,
+      discountAmount: map['discountAmount'] ?? 0,
     );
   }
 }
@@ -134,6 +150,8 @@ class Destination {
   final List<String> photos; // All photos
   final List<String> popularFor;
   final bool available;
+  final bool discountEnabled;
+  final num discountAmount;
 
   Destination({
     required this.id,
@@ -148,7 +166,11 @@ class Destination {
     required this.photos,
     required this.popularFor,
     required this.available,
+    this.discountEnabled = false,
+    this.discountAmount = 0,
   });
+
+  num get discountedStartingPrice => discountEnabled ? (startingPrice - discountAmount).clamp(0, double.infinity) : startingPrice;
 
   factory Destination.fromMap(String id, Map<String, dynamic> map) {
     // Handle photo as either String or List<String>
@@ -180,6 +202,8 @@ class Destination {
       photos: photosList,
       popularFor: List<String>.from(map['popularFor'] ?? const []),
       available: map['available'] ?? false,
+      discountEnabled: map['discountEnabled'] ?? false,
+      discountAmount: map['discountAmount'] ?? 0,
     );
   }
 }

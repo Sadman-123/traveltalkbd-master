@@ -126,7 +126,13 @@ class WebHomePackages extends StatelessWidget {
                           title: pkg.title,
                           subtitle: '${pkg.city}, ${pkg.country}',
                           badge: pkg.duration,
-                          priceText: '${pkg.currency} ${pkg.price}',
+                          priceText: pkg.discountEnabled
+                              ? '${pkg.currency} ${pkg.discountedPrice.toStringAsFixed(0)}'
+                              : '${pkg.currency} ${pkg.price}',
+                          originalPriceText: pkg.discountEnabled
+                              ? '${pkg.currency} ${pkg.price}'
+                              : null,
+                          imageBadge: null,
                           onTap: () => _openTourDetails(context, pkg),
                         );
                       },
@@ -182,7 +188,13 @@ class WebHomePackages extends StatelessWidget {
                           title: visa.title,
                           subtitle: visa.country,
                           badge: visa.processingTime,
-                          priceText: '${visa.currency} ${visa.price}',
+                          priceText: visa.discountEnabled
+                              ? '${visa.currency} ${visa.discountedPrice.toStringAsFixed(0)}'
+                              : '${visa.currency} ${visa.price}',
+                          originalPriceText: visa.discountEnabled
+                              ? '${visa.currency} ${visa.price}'
+                              : null,
+                          imageBadge: visa.visaType.isNotEmpty ? visa.visaType : null,
                           onTap: () => _openVisaDetails(context, visa),
                         );
                       },
@@ -204,6 +216,8 @@ class _PackageCard extends StatefulWidget {
   final String subtitle;
   final String badge;
   final String priceText;
+  final String? originalPriceText;
+  final String? imageBadge;
   final VoidCallback? onTap;
 
   const _PackageCard({
@@ -212,6 +226,8 @@ class _PackageCard extends StatefulWidget {
     required this.subtitle,
     required this.badge,
     required this.priceText,
+    this.originalPriceText,
+    this.imageBadge,
     this.onTap,
   });
 
@@ -265,29 +281,57 @@ class _PackageCardState extends State<_PackageCard> {
                 children: [
                   AspectRatio(
                     aspectRatio: 16 / 11,
-                    child: widget.imageUrl.isNotEmpty
-                        ? Image.network(
-                            widget.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) {
-                              return Container(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        widget.imageUrl.isNotEmpty
+                            ? Image.network(
+                                widget.imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) {
+                                  return Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Container(
                                 color: Colors.grey.shade200,
                                 child: const Icon(
                                   Icons.image_not_supported,
                                   size: 48,
                                   color: Colors.grey,
                                 ),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(
-                              Icons.image_not_supported,
-                              size: 48,
-                              color: Colors.grey,
+                              ),
+                        if (widget.imageBadge != null)
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                widget.imageBadge!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
+                      ],
+                    ),
                   ),
                   Expanded(
                     child: Padding(
@@ -340,14 +384,39 @@ class _PackageCardState extends State<_PackageCard> {
                             ),
                           ),
                           const Spacer(),
-                          Text(
-                            widget.priceText,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: priceColor,
+                          if (widget.originalPriceText != null)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  widget.originalPriceText!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: (titleColor == Colors.white ? Colors.white54 : Colors.grey),
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  widget.priceText,
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: priceColor,
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Text(
+                              widget.priceText,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: priceColor,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

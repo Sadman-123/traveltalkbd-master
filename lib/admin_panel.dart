@@ -66,6 +66,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
      gradient: Traveltalktheme.primaryGradient
     ),
   ),
+        centerTitle: false,
         title: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,),
         bottom: TabBar(
           labelColor: Colors.white,
@@ -500,6 +501,7 @@ class _DestinationsTabState extends State<DestinationsTab> {
   Future<void> _loadDestinations() async {
     try {
       final snapshot = await widget.dbRef.child('destinations').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -516,6 +518,7 @@ class _DestinationsTabState extends State<DestinationsTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -627,6 +630,8 @@ class _DestinationsTabState extends State<DestinationsTab> {
     final bestTimeController = TextEditingController(text: data?['bestTimeToVisit'] ?? '');
     final startingPriceController = TextEditingController(text: data?['startingPrice']?.toString() ?? '');
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
+    final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
     final popularForController = TextEditingController(
       text: (data?['popularFor'] as List?)?.join(', ') ?? '',
     );
@@ -890,6 +895,36 @@ class _DestinationsTabState extends State<DestinationsTab> {
                   ),
                   const SizedBox(height: 8),
                   ValueListenableBuilder<bool>(
+                    valueListenable: discountEnabledController,
+                    builder: (context, discountEnabled, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Discount'),
+                          subtitle: const Text('Enable discount for this destination'),
+                          value: discountEnabled,
+                          onChanged: (v) {
+                            discountEnabledController.value = v;
+                            setDialogState(() {});
+                          },
+                        ),
+                        if (discountEnabled)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 8),
+                            child: TextFormField(
+                              controller: discountAmountController,
+                              decoration: const InputDecoration(
+                                labelText: 'Discount Amount',
+                                hintText: 'Amount to subtract from price',
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
                     valueListenable: availableController,
                     builder: (context, available, _) => SwitchListTile(
                       title: const Text('Available'),
@@ -985,6 +1020,8 @@ class _DestinationsTabState extends State<DestinationsTab> {
                                     'startingPrice': int.tryParse(startingPriceController.text) ?? 0,
                                     'popularFor': popularFor,
                                     'available': availableController.value,
+                                    'discountEnabled': discountEnabledController.value,
+                                    'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
                                   };
 
                                   if (id == null) {
@@ -1171,6 +1208,7 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
   Future<void> _loadTours() async {
     try {
       final snapshot = await widget.dbRef.child('tour_packages').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -1187,6 +1225,7 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -1298,6 +1337,8 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
     final priceController = TextEditingController(text: data?['price']?.toString() ?? '');
     final ratingController = TextEditingController(text: data?['rating']?.toString() ?? '4.5');
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
+    final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
     
     // Handle images - can be single URL string or list of URLs
     List<String> imageUrls = [];
@@ -1543,6 +1584,36 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                   ),
                   const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: discountEnabledController,
+                    builder: (context, discountEnabled, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Discount'),
+                          subtitle: const Text('Enable discount for this tour package'),
+                          value: discountEnabled,
+                          onChanged: (v) {
+                            discountEnabledController.value = v;
+                            setDialogState(() {});
+                          },
+                        ),
+                        if (discountEnabled)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 8),
+                            child: TextFormField(
+                              controller: discountAmountController,
+                              decoration: const InputDecoration(
+                                labelText: 'Discount Amount',
+                                hintText: 'Amount to subtract from price',
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: ratingController,
                     decoration: const InputDecoration(labelText: 'Rating (0-5)'),
@@ -1638,6 +1709,8 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
                                     'price': int.tryParse(priceController.text) ?? 0,
                                     'rating': double.tryParse(ratingController.text) ?? 4.5,
                                     'available': availableController.value,
+                                    'discountEnabled': discountEnabledController.value,
+                                    'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
                                     'type': 'tour',
                                   };
 
@@ -1826,6 +1899,7 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
   Future<void> _loadVisas() async {
     try {
       final snapshot = await widget.dbRef.child('visa_packages').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -1842,6 +1916,7 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -1956,6 +2031,8 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
       text: (data?['requiredDocuments'] as List?)?.join(', ') ?? '',
     );
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
+    final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
+    final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
     
     // Handle images - can be single URL string or list of URLs
     List<String> imageUrls = [];
@@ -2189,6 +2266,36 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                   ),
                   const SizedBox(height: 8),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: discountEnabledController,
+                    builder: (context, discountEnabled, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Discount'),
+                          subtitle: const Text('Enable discount for this visa package'),
+                          value: discountEnabled,
+                          onChanged: (v) {
+                            discountEnabledController.value = v;
+                            setDialogState(() {});
+                          },
+                        ),
+                        if (discountEnabled)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16, top: 8),
+                            child: TextFormField(
+                              controller: discountAmountController,
+                              decoration: const InputDecoration(
+                                labelText: 'Discount Amount',
+                                hintText: 'Amount to subtract from price',
+                              ),
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: visaTypeController,
                     decoration: const InputDecoration(labelText: 'Visa Type (e.g., Tourist)'),
@@ -2308,6 +2415,8 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                     'processingTime': processingTimeController.text,
                                     'requiredDocuments': documents,
                                     'available': availableController.value,
+                                    'discountEnabled': discountEnabledController.value,
+                                    'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
                                     'type': 'visa',
                                   };
 
@@ -2482,13 +2591,15 @@ class _BookingsTabState extends State<BookingsTab> {
   bool _isLoading = true;
   String _filterStatus = 'all';
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<DatabaseEvent>? _bookingsSub;
 
   @override
   void initState() {
     super.initState();
     _loadBookings();
     // Listen for real-time updates
-    widget.dbRef.child('bookings').onValue.listen((event) {
+    _bookingsSub = widget.dbRef.child('bookings').onValue.listen((event) {
+      if (!mounted) return;
       if (event.snapshot.exists) {
         setState(() {
           final raw = event.snapshot.value;
@@ -2506,9 +2617,17 @@ class _BookingsTabState extends State<BookingsTab> {
     });
   }
 
+  @override
+  void dispose() {
+    _bookingsSub?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadBookings() async {
     try {
       final snapshot = await widget.dbRef.child('bookings').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -2525,6 +2644,7 @@ class _BookingsTabState extends State<BookingsTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -2591,12 +2711,6 @@ class _BookingsTabState extends State<BookingsTab> {
     }).toList();
     
     return filtered;
-  }
-  
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
@@ -3457,6 +3571,8 @@ class _BannersTabState extends State<BannersTab> {
   Map<String, dynamic> _banners = {};
   bool _isLoading = true;
   bool _showPromotions = true;
+  StreamSubscription<DatabaseEvent>? _bannersSub;
+  StreamSubscription<DatabaseEvent>? _showPromotionsSub;
 
   @override
   void initState() {
@@ -3464,38 +3580,44 @@ class _BannersTabState extends State<BannersTab> {
     _loadBanners();
     _loadShowPromotionsSetting();
     // Listen for real-time updates
-    widget.dbRef.child('banners').onValue.listen((event) {
-      if (mounted) {
-        if (event.snapshot.exists) {
-          setState(() {
-            final raw = event.snapshot.value;
-            if (raw is Map) {
-              _banners = Map<String, dynamic>.from(
-                raw.map((key, value) => MapEntry(key.toString(), value)),
-              );
-            }
-          });
-        } else {
-          setState(() {
-            _banners = {};
-          });
-        }
-      }
-    });
-    // Listen for show promotions setting
-    widget.dbRef.child('settings').child('showPromotions').onValue.listen((event) {
-      if (mounted) {
+    _bannersSub = widget.dbRef.child('banners').onValue.listen((event) {
+      if (!mounted) return;
+      if (event.snapshot.exists) {
         setState(() {
-          final value = event.snapshot.value;
-          _showPromotions = value is bool ? value : true;
+          final raw = event.snapshot.value;
+          if (raw is Map) {
+            _banners = Map<String, dynamic>.from(
+              raw.map((key, value) => MapEntry(key.toString(), value)),
+            );
+          }
+        });
+      } else {
+        setState(() {
+          _banners = {};
         });
       }
     });
+    // Listen for show promotions setting
+    _showPromotionsSub = widget.dbRef.child('settings').child('showPromotions').onValue.listen((event) {
+      if (!mounted) return;
+      setState(() {
+        final value = event.snapshot.value;
+        _showPromotions = value is bool ? value : true;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _bannersSub?.cancel();
+    _showPromotionsSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadBanners() async {
     try {
       final snapshot = await widget.dbRef.child('banners').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -3512,6 +3634,7 @@ class _BannersTabState extends State<BannersTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -3526,6 +3649,7 @@ class _BannersTabState extends State<BannersTab> {
   Future<void> _loadShowPromotionsSetting() async {
     try {
       final snapshot = await widget.dbRef.child('settings').child('showPromotions').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final value = snapshot.value;
@@ -4082,34 +4206,41 @@ class _AboutUsTabState extends State<AboutUsTab> {
   Map<String, dynamic>? _aboutUs;
   Map<String, dynamic> _employees = {};
   bool _isLoading = true;
+  StreamSubscription<DatabaseEvent>? _aboutUsSub;
 
   @override
   void initState() {
     super.initState();
     _loadAboutUs();
     // Listen for real-time updates
-    widget.dbRef.child('about_us').onValue.listen((event) {
-      if (mounted) {
-        if (event.snapshot.exists) {
-          setState(() {
-            final raw = event.snapshot.value;
-            if (raw is Map) {
-              _aboutUs = Map<String, dynamic>.from(raw);
-              if (_aboutUs!['employees'] != null && _aboutUs!['employees'] is Map) {
-                _employees = Map<String, dynamic>.from(_aboutUs!['employees']);
-              } else {
-                _employees = {};
-              }
+    _aboutUsSub = widget.dbRef.child('about_us').onValue.listen((event) {
+      if (!mounted) return;
+      if (event.snapshot.exists) {
+        setState(() {
+          final raw = event.snapshot.value;
+          if (raw is Map) {
+            _aboutUs = Map<String, dynamic>.from(raw);
+            if (_aboutUs!['employees'] != null && _aboutUs!['employees'] is Map) {
+              _employees = Map<String, dynamic>.from(_aboutUs!['employees']);
+            } else {
+              _employees = {};
             }
-          });
-        }
+          }
+        });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _aboutUsSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAboutUs() async {
     try {
       final snapshot = await widget.dbRef.child('about_us').get();
+      if (!mounted) return;
       if (snapshot.exists) {
         setState(() {
           final raw = snapshot.value;
@@ -4129,6 +4260,7 @@ class _AboutUsTabState extends State<AboutUsTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

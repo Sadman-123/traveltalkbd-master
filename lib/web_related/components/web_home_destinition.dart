@@ -344,8 +344,11 @@ class _DestinationCardState extends State<_DestinationCard> {
 
   Widget _priceChip() {
     final destination = widget.destination;
-    final priceLabel =
+    final hasDiscount = destination.discountEnabled;
+    final originalPrice =
         '${destination.currency} ${destination.startingPrice.toStringAsFixed(0)}';
+    final discountedPrice =
+        '${destination.currency} ${destination.discountedStartingPrice.toStringAsFixed(0)}';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -357,14 +360,41 @@ class _DestinationCardState extends State<_DestinationCard> {
         children: [
           const Icon(Icons.flight_takeoff, color: Colors.white, size: 18),
           const SizedBox(width: 6),
-          Text(
-            priceLabel,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+          if (hasDiscount)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  originalPrice,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  discountedPrice,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            )
+          else
+            Text(
+              originalPrice,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -75,7 +75,13 @@ class MobileHomePackages extends StatelessWidget {
                     title: pkg.title,
                     subtitle: '${pkg.city}, ${pkg.country}',
                     badge: pkg.duration,
-                    priceText: '${pkg.currency} ${pkg.price}',
+                    priceText: pkg.discountEnabled
+                        ? '${pkg.currency} ${pkg.discountedPrice.toStringAsFixed(0)}'
+                        : '${pkg.currency} ${pkg.price}',
+                    originalPriceText: pkg.discountEnabled
+                        ? '${pkg.currency} ${pkg.price}'
+                        : null,
+                    imageBadge: null,
                     onTap: () => _openTourDetails(context, pkg),
                   );
                 },
@@ -95,7 +101,13 @@ class MobileHomePackages extends StatelessWidget {
                     title: visa.title,
                     subtitle: visa.country,
                     badge: visa.processingTime,
-                    priceText: '${visa.currency} ${visa.price}',
+                    priceText: visa.discountEnabled
+                        ? '${visa.currency} ${visa.discountedPrice.toStringAsFixed(0)}'
+                        : '${visa.currency} ${visa.price}',
+                    originalPriceText: visa.discountEnabled
+                        ? '${visa.currency} ${visa.price}'
+                        : null,
+                    imageBadge: visa.visaType.isNotEmpty ? visa.visaType : null,
                     onTap: () => _openVisaDetails(context, visa),
                   );
                 },
@@ -134,6 +146,8 @@ class _PackageCard extends StatefulWidget {
   final String subtitle;
   final String badge;
   final String priceText;
+  final String? originalPriceText;
+  final String? imageBadge;
   final VoidCallback? onTap;
 
   const _PackageCard({
@@ -142,6 +156,8 @@ class _PackageCard extends StatefulWidget {
     required this.subtitle,
     required this.badge,
     required this.priceText,
+    this.originalPriceText,
+    this.imageBadge,
     this.onTap,
   });
 
@@ -192,12 +208,40 @@ class _PackageCardState extends State<_PackageCard> {
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 11,
-                  child: widget.imageUrl.isNotEmpty
-                      ? Image.network(widget.imageUrl, fit: BoxFit.cover)
-                      : Container(
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.image_not_supported),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      widget.imageUrl.isNotEmpty
+                          ? Image.network(widget.imageUrl, fit: BoxFit.cover)
+                          : Container(
+                              color: Colors.grey.shade200,
+                              child: const Icon(Icons.image_not_supported),
+                            ),
+                      if (widget.imageBadge != null)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              widget.imageBadge!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: Padding(
@@ -251,14 +295,38 @@ class _PackageCardState extends State<_PackageCard> {
                         ),
                         const SizedBox(height: 8),
                         Flexible(
-                          child: Text(
-                            widget.priceText,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: priceColor,
-                            ),
-                          ),
+                          child: widget.originalPriceText != null
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      widget.originalPriceText!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: (titleColor == Colors.white ? Colors.white54 : Colors.grey),
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      widget.priceText,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: priceColor,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  widget.priceText,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: priceColor,
+                                  ),
+                                ),
                         ),
                       ],
                     ),
