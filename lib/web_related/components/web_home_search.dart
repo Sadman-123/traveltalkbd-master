@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/web_related/web_travel_detail_screen.dart';
+import 'package:traveltalkbd/diy_components/spark_banner_overlay.dart';
 import 'package:traveltalkbd/services/banner_service.dart' as banner_service;
 import 'package:traveltalkbd/services/home_settings_service.dart';
 
@@ -663,26 +664,31 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
     } else {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          Color(0xFF4A1E6A), // purple
-          Color(0xFFE10098), // pink
-        ],
-      ),
+        child: SparkBannerOverlay(
+          duration: const Duration(milliseconds: 2500),
+          sparkColor: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color(0xFF4A1E6A), // purple
+                  Color(0xFFE10098), // pink
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
+            child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
@@ -722,6 +728,8 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
               size: 24,
             ),
           ],
+        ),
+          ),
         ),
       );
     }

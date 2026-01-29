@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:traveltalkbd/diy_components/spark_banner_overlay.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/components/package_search_screen.dart';
 import 'package:traveltalkbd/services/banner_service.dart' as banner_service;
@@ -343,26 +344,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
                             child: _buildBannerWidget(_banners[0]),
                           ),
                   ),
-                  if (_banners.length > 1) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        _banners.length,
-                        (index) => Container(
-                          width: 6,
-                          height: 6,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentBannerIndex == index
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.5),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 8),
                 ],
               ],
             ),
@@ -419,7 +401,11 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
         ),
       );
     } else {
-      return Container(
+      return SparkBannerOverlay(
+        duration: const Duration(milliseconds: 2500),
+        sparkColor: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: Traveltalktheme.primaryGradient,
@@ -469,6 +455,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
               color: Colors.white,
             ),
           ],
+        ),
         ),
       );
     }
