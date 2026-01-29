@@ -4953,6 +4953,47 @@ class _AboutUsTabState extends State<AboutUsTab> {
     }
   }
 
+  Future<void> _reorderEmployees(int oldIndex, int newIndex) async {
+    final employeesList = _employees.entries.toList()
+      ..sort((a, b) {
+        final rankA = (a.value['rank'] as int?) ?? 0;
+        final rankB = (b.value['rank'] as int?) ?? 0;
+        return rankA.compareTo(rankB);
+      });
+
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final item = employeesList.removeAt(oldIndex);
+    employeesList.insert(newIndex, item);
+
+    try {
+      await Future.wait(
+        employeesList.asMap().entries.map((e) {
+          final rank = e.key;
+          final entry = e.value;
+          return widget.dbRef
+              .child('about_us')
+              .child('employees')
+              .child(entry.key)
+              .child('rank')
+              .set(rank);
+        }),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Employee order updated')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating order: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -5075,135 +5116,154 @@ class _AboutUsTabState extends State<AboutUsTab> {
                   if (employeesList.isEmpty)
                     const Text('No employees added yet')
                   else
-                    ...employeesList.map((entry) {
-                      final employee = entry.value;
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Photo on left
-                              Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.grey.shade300, width: 2),
-                                ),
-                                child: ClipOval(
-                                  child: employee['pictureUrl'] != null && employee['pictureUrl'].toString().isNotEmpty
-                                      ? Image.network(
-                                          employee['pictureUrl'],
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50),
-                                        )
-                                      : const Icon(Icons.person, size: 50),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              // Details on right
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      employee['name'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                    ReorderableListView(
+                      buildDefaultDragHandles: false,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onReorder: _reorderEmployees,
+                      children: employeesList.asMap().entries.map((e) {
+                        final index = e.key;
+                        final entry = e.value;
+                        final employee = entry.value;
+                        return Card(
+                          key: ValueKey(entry.key),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ReorderableDragStartListener(
+                                  index: index,
+                                  child: Tooltip(
+                                    message: 'Drag to reorder',
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 12, top: 4),
+                                      child: Icon(Icons.drag_handle, color: Colors.grey[600], size: 28),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      employee['designation'] ?? '',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.blue.shade700,
-                                        fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                // Photo on left
+                                Container(
+                                  width: 100,
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                                  ),
+                                  child: ClipOval(
+                                    child: employee['pictureUrl'] != null && employee['pictureUrl'].toString().isNotEmpty
+                                        ? Image.network(
+                                            employee['pictureUrl'],
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 50),
+                                          )
+                                        : const Icon(Icons.person, size: 50),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                // Details on right
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        employee['name'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                    if (employee['experience'] != null && employee['experience'].toString().isNotEmpty) ...[
                                       const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.work_outline, size: 14, color: Colors.grey[600]),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            employee['experience'],
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.grey[600],
+                                      Text(
+                                        employee['designation'] ?? '',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.blue.shade700,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      if (employee['experience'] != null && employee['experience'].toString().isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.work_outline, size: 14, color: Colors.grey[600]),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              employee['experience'],
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[600],
+                                              ),
                                             ),
+                                          ],
+                                        ),
+                                      ],
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
+                                        ),
+                                        child: Text(
+                                          '"${employee['quote'] ?? ''}"',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Rank: ${employee['rank'] ?? 0}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[500],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Edit and Delete buttons
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _showEditEmployeeDialog(entry.key),
+                                  tooltip: 'Edit Employee',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Delete Employee'),
+                                        content: const Text('Are you sure you want to delete this employee?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              _deleteEmployee(entry.key);
+                                            },
+                                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.grey.shade200),
-                                      ),
-                                      child: Text(
-                                        '"${employee['quote'] ?? ''}"',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontStyle: FontStyle.italic,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Rank: ${employee['rank'] ?? 0}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[500],
-                                      ),
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 ),
-                              ),
-                              // Edit and Delete buttons
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _showEditEmployeeDialog(entry.key),
-                                tooltip: 'Edit Employee',
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Delete Employee'),
-                                      content: const Text('Are you sure you want to delete this employee?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _deleteEmployee(entry.key);
-                                          },
-                                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }).toList(),
+                    ),
                 ],
               ),
             ),
