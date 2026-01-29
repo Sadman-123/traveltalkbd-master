@@ -7,8 +7,12 @@ import 'package:traveltalkbd/services/banner_service.dart' as banner_service;
 import 'package:traveltalkbd/services/home_settings_service.dart';
 
 class MobileHomeSearch extends StatefulWidget {
+  /// When true, renders as a fixed-height section for embedding in a scroll view.
+  final bool asSection;
+
   const MobileHomeSearch({
     Key? key,
+    this.asSection = false,
   }) : super(key: key);
 
   @override
@@ -118,8 +122,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    final content = Stack(
         children: [
           // Background Image
           Container(
@@ -350,8 +353,14 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
             ),
           ),
         ],
-      ),
     );
+    if (widget.asSection) {
+      return SizedBox(
+        height: 520,
+        child: content,
+      );
+    }
+    return Scaffold(body: content);
   }
 
   Widget _buildBannerWidget(banner_service.Banner banner) {

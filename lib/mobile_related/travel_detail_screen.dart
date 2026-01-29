@@ -41,11 +41,12 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-         flexibleSpace: Container(
-    decoration:  BoxDecoration(
-      gradient: Traveltalktheme.primaryGradient
-    ),
-  ),
+        centerTitle: false,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: Traveltalktheme.primaryGradient,
+          ),
+        ),
         title: Text(
           widget.item.title,
           style: const TextStyle(fontWeight: FontWeight.bold,color: Colors.white),

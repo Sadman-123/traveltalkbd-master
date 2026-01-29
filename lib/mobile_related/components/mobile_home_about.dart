@@ -3,10 +3,14 @@ import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 
 class MobileHomeAbout extends StatelessWidget {
-  const MobileHomeAbout({super.key});
+  /// When true, renders without SingleChildScrollView for embedding in a parent scroll.
+  final bool embedded;
+
+  const MobileHomeAbout({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
+    final isEmbedded = embedded;
     return FutureBuilder<TravelContent>(
       future: TravelDataService.getContent(),
       builder: (context, snapshot) {
@@ -21,11 +25,30 @@ class MobileHomeAbout extends StatelessWidget {
         final employeesList = about.employees.values.toList()
           ..sort((a, b) => a.rank.compareTo(b.rank));
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        final column = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'About Us',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Learn more about our company',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               // Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,39 +394,17 @@ class MobileHomeAbout extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ...about.services.map((item) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.work_outline,
-                        color: Colors.blue.shade700,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          item,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue.shade900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.2,
+                children: about.services.map((item) {
+                  return _ServiceCard(service: item);
+                }).toList(),
+              ),
               const SizedBox(height: 24),
               // Documents Section
               if (about.documents.isNotEmpty) ...[
@@ -507,9 +508,69 @@ class MobileHomeAbout extends StatelessWidget {
                 ),
               ),
             ],
-          ),
+          );
+        if (isEmbedded) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: column,
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: column,
         );
       },
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final String service;
+
+  const _ServiceCard({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.blue.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.blue.shade100),
+      ),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.15),
+      child: InkWell(
+        onTap: () {},
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: const Color(0xFFE10098).withOpacity(0.2),
+        splashColor: const Color(0xFF4A1E6A).withOpacity(0.4),
+        highlightColor: const Color(0xFFE10098).withOpacity(0.25),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.work_outline,
+                color: Colors.blue.shade700,
+                size: 28,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                service,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue.shade900,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,11 +11,7 @@ class MobileHomeDestinition extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF0C1631), Color(0xFF0F1F3D)],
-        ),
+        color: Color(0xFFFBEFEF)
       ),
       child: SafeArea(
         child: FutureBuilder<TravelContent>(
@@ -48,7 +44,6 @@ class MobileHomeDestinition extends StatelessWidget {
                       Text(
                         'Top Destinations',
                         style: TextStyle(
-                          color: Colors.white,
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                         ),
@@ -57,7 +52,6 @@ class MobileHomeDestinition extends StatelessWidget {
                       Text(
                         'Swipe to explore curated places to visit',
                         style: TextStyle(
-                          color: Colors.white70,
                           fontSize: 14,
                         ),
                       ),

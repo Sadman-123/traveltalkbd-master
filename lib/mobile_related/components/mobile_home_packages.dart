@@ -4,10 +4,14 @@ import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/mobile_related/travel_detail_screen.dart';
 
 class MobileHomePackages extends StatelessWidget {
-  const MobileHomePackages({super.key});
+  /// When true, renders without SingleChildScrollView for embedding in a parent scroll.
+  final bool embedded;
+
+  const MobileHomePackages({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
+    final isEmbedded = embedded;
     return FutureBuilder<TravelContent>(
       future: TravelDataService.getContent(),
       builder: (context, snapshot) {
@@ -56,16 +60,29 @@ class MobileHomePackages extends StatelessWidget {
           );
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: Column(
+        final column = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Tour Packages',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Tour Packages',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Explore our curated tour packages',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
               _buildGrid(
                 itemCount: tourPackages.length,
                 itemBuilder: (context, index) {
@@ -87,11 +104,26 @@ class MobileHomePackages extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Visa Packages',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Visa Packages',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Visa assistance and processing services',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 10),
               _buildGrid(
                 itemCount: visaPackages.length,
                 itemBuilder: (context, index) {
@@ -113,7 +145,16 @@ class MobileHomePackages extends StatelessWidget {
                 },
               ),
             ],
-          ),
+          );
+        if (isEmbedded) {
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: column,
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(12),
+          child: column,
         );
       },
     );
