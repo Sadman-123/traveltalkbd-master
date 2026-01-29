@@ -4705,6 +4705,237 @@ class _AboutUsTabState extends State<AboutUsTab> {
     );
   }
 
+  void _showEditEmployeeDialog(String id) {
+    final employee = _employees[id];
+    if (employee == null) return;
+
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: employee['name']?.toString() ?? '');
+    final designationController = TextEditingController(text: employee['designation']?.toString() ?? '');
+    final quoteController = TextEditingController(text: employee['quote']?.toString() ?? '');
+    final experienceController = TextEditingController(text: employee['experience']?.toString() ?? '');
+    final selectedImage = ValueNotifier<_PickedImage?>(null);
+    final isUploading = ValueNotifier<bool>(false);
+    final existingPictureUrl = employee['pictureUrl']?.toString();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: MediaQuery.of(context).size.width > 600 ? 600 : MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Edit Employee',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: nameController,
+                            decoration: const InputDecoration(labelText: 'Name *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: designationController,
+                            decoration: const InputDecoration(labelText: 'Designation *'),
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: quoteController,
+                            decoration: const InputDecoration(labelText: 'Quote *'),
+                            maxLines: 3,
+                            validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: experienceController,
+                            decoration: const InputDecoration(labelText: 'Experience (e.g., "5+ years" or "10 years in travel industry")'),
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('Employee Photo (optional - leave as is or change)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 8),
+                          ValueListenableBuilder<_PickedImage?>(
+                            valueListenable: selectedImage,
+                            builder: (context, image, _) {
+                              return Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final picker = ImagePicker();
+                                      _PickedImage? picked;
+                                      if (kIsWeb) {
+                                        final result = await picker.pickImage(source: ImageSource.gallery);
+                                        if (result != null) {
+                                          final bytes = await result.readAsBytes();
+                                          picked = _PickedImage(bytes: bytes, name: result.name);
+                                        }
+                                      } else {
+                                        final result = await picker.pickImage(source: ImageSource.gallery);
+                                        if (result != null) {
+                                          picked = _PickedImage(file: File(result.path));
+                                        }
+                                      }
+                                      if (picked != null) {
+                                        selectedImage.value = picked;
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 150,
+                                      height: 150,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.grey),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: image != null
+                                          ? (kIsWeb && image.bytes != null
+                                              ? Image.memory(image.bytes!, fit: BoxFit.cover)
+                                              : image.file != null
+                                                  ? Image.file(image.file!, fit: BoxFit.cover)
+                                                  : const Icon(Icons.person, size: 80))
+                                          : (existingPictureUrl != null && existingPictureUrl.isNotEmpty
+                                              ? Image.network(
+                                                  existingPictureUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 80),
+                                                )
+                                              : const Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(Icons.add_photo_alternate, size: 50),
+                                                    SizedBox(height: 8),
+                                                    Text('Tap to add photo'),
+                                                  ],
+                                                )),
+                                    ),
+                                  ),
+                                  if (image != null)
+                                    TextButton(
+                                      onPressed: () => selectedImage.value = null,
+                                      child: const Text('Remove New Photo'),
+                                    ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          ValueListenableBuilder<bool>(
+                            valueListenable: isUploading,
+                            builder: (context, uploading, _) {
+                              return ElevatedButton(
+                                onPressed: uploading
+                                    ? null
+                                    : () async {
+                                        if (formKey.currentState!.validate()) {
+                                          setDialogState(() {
+                                            isUploading.value = true;
+                                          });
+                                          try {
+                                            String? imageUrl = existingPictureUrl;
+                                            if (selectedImage.value != null) {
+                                              if (kIsWeb && selectedImage.value!.bytes != null) {
+                                                imageUrl = await CloudinaryService.uploadImageFromBytes(
+                                                  selectedImage.value!.bytes!,
+                                                  selectedImage.value!.name ?? 'employee_${DateTime.now().millisecondsSinceEpoch}',
+                                                  folder: 'employees',
+                                                );
+                                              } else if (selectedImage.value!.file != null) {
+                                                imageUrl = await CloudinaryService.uploadImage(
+                                                  selectedImage.value!.file!,
+                                                  folder: 'employees',
+                                                );
+                                              }
+                                              if (imageUrl == null || imageUrl.isEmpty) {
+                                                throw Exception('Failed to upload image');
+                                              }
+                                            }
+
+                                            final employeeData = {
+                                              'name': nameController.text,
+                                              'designation': designationController.text,
+                                              'pictureUrl': imageUrl ?? '',
+                                              'quote': quoteController.text,
+                                              'experience': experienceController.text,
+                                              'rank': employee['rank'] ?? 0,
+                                            };
+
+                                            await widget.dbRef.child('about_us').child('employees').child(id).set(employeeData);
+                                            if (mounted) {
+                                              Navigator.pop(context);
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Employee updated successfully')),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Error: $e')),
+                                              );
+                                            }
+                                          } finally {
+                                            setDialogState(() {
+                                              isUploading.value = false;
+                                            });
+                                          }
+                                        }
+                                      },
+                                child: uploading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Save Changes'),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _deleteEmployee(String id) async {
     try {
       await widget.dbRef.child('about_us').child('employees').child(id).remove();
@@ -4937,7 +5168,12 @@ class _AboutUsTabState extends State<AboutUsTab> {
                                   ],
                                 ),
                               ),
-                              // Delete button
+                              // Edit and Delete buttons
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _showEditEmployeeDialog(entry.key),
+                                tooltip: 'Edit Employee',
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () {
