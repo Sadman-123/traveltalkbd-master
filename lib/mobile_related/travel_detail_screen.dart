@@ -48,7 +48,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
   ),
         title: Text(
           widget.item.title,
-          style: const TextStyle(fontWeight: FontWeight.bold,color: Colors.black),
+          style: const TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
         ),
         elevation: 0,
       ),
@@ -133,7 +133,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: Colors.purple,
                     elevation: 4,
                   ),
                   child: const Row(
