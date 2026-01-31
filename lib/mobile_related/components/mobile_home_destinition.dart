@@ -26,8 +26,7 @@ class MobileHomeDestinition extends StatelessWidget {
 
             final destinations = snapshot.data!.destinations.values
                 .where((d) => d.available)
-                .toList()
-              ..sort((a, b) => a.name.compareTo(b.name));
+                .toList();
 
             if (destinations.isEmpty) {
               return const Center(child: Text('No destinations available right now'));
