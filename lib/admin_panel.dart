@@ -2018,6 +2018,44 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
     );
   }
 
+  Widget _buildEntryTypeRow(
+    String placeholder,
+    ValueNotifier<bool> enabledNotifier,
+    TextEditingController priceController,
+    void Function(void Function()) setDialogState,
+  ) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: enabledNotifier,
+      builder: (context, enabled, _) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Switch(
+              value: enabled,
+              onChanged: (v) {
+                enabledNotifier.value = v;
+                setDialogState(() {});
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: priceController,
+                decoration: InputDecoration(
+                  hintText: placeholder,
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                keyboardType: TextInputType.number,
+                enabled: enabled,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showVisaDialog({String? id, Map<String, dynamic>? data}) {
     final formKey = GlobalKey<FormState>();
     final titleController = TextEditingController(text: data?['title'] ?? '');
@@ -2033,7 +2071,28 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
     final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
     final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
-    
+
+    // Entry types: single, double, multiple - safe extraction (Firebase returns Map<dynamic, dynamic>)
+    final entryTypesRaw = data?['entryTypes'];
+    final Map<String, dynamic>? et = entryTypesRaw != null && entryTypesRaw is Map
+        ? Map<String, dynamic>.from(entryTypesRaw)
+        : null;
+    final singleEntry = et != null && et['singleEntry'] is Map
+        ? Map<String, dynamic>.from(et['singleEntry'] as Map)
+        : null;
+    final doubleEntry = et != null && et['doubleEntry'] is Map
+        ? Map<String, dynamic>.from(et['doubleEntry'] as Map)
+        : null;
+    final multipleEntry = et != null && et['multipleEntry'] is Map
+        ? Map<String, dynamic>.from(et['multipleEntry'] as Map)
+        : null;
+    final singleEntryEnabled = ValueNotifier<bool>(singleEntry?['enabled'] ?? false);
+    final singleEntryPrice = TextEditingController(text: singleEntry?['price']?.toString() ?? '');
+    final doubleEntryEnabled = ValueNotifier<bool>(doubleEntry?['enabled'] ?? false);
+    final doubleEntryPrice = TextEditingController(text: doubleEntry?['price']?.toString() ?? '');
+    final multipleEntryEnabled = ValueNotifier<bool>(multipleEntry?['enabled'] ?? false);
+    final multipleEntryPrice = TextEditingController(text: multipleEntry?['price']?.toString() ?? '');
+
     // Handle images - can be single URL string or list of URLs
     List<String> imageUrls = [];
     if (data?['photo'] != null) {
@@ -2261,9 +2320,44 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: priceController,
-                    decoration: const InputDecoration(labelText: 'Price *'),
+                    decoration: const InputDecoration(
+                      labelText: 'Base Price *',
+                      hintText: 'Used when no entry types are enabled',
+                    ),
                     keyboardType: TextInputType.number,
                     validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: singleEntryEnabled,
+                    builder: (context, _, __) => ValueListenableBuilder<bool>(
+                      valueListenable: doubleEntryEnabled,
+                      builder: (context, __, ___) => ValueListenableBuilder<bool>(
+                        valueListenable: multipleEntryEnabled,
+                        builder: (context, ___, ____) => Column(
+                          children: [
+                            _buildEntryTypeRow(
+                              'Single entry price',
+                              singleEntryEnabled,
+                              singleEntryPrice,
+                              setDialogState,
+                            ),
+                            _buildEntryTypeRow(
+                              'Double entry price',
+                              doubleEntryEnabled,
+                              doubleEntryPrice,
+                              setDialogState,
+                            ),
+                            _buildEntryTypeRow(
+                              'Multiple entry price',
+                              multipleEntryEnabled,
+                              multipleEntryPrice,
+                              setDialogState,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   ValueListenableBuilder<bool>(
@@ -2404,6 +2498,21 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                       .where((e) => e.isNotEmpty)
                                       .toList();
 
+                                  final entryTypes = <String, Map<String, dynamic>>{
+                                    'singleEntry': {
+                                      'enabled': singleEntryEnabled.value,
+                                      'price': num.tryParse(singleEntryPrice.text) ?? 0,
+                                    },
+                                    'doubleEntry': {
+                                      'enabled': doubleEntryEnabled.value,
+                                      'price': num.tryParse(doubleEntryPrice.text) ?? 0,
+                                    },
+                                    'multipleEntry': {
+                                      'enabled': multipleEntryEnabled.value,
+                                      'price': num.tryParse(multipleEntryPrice.text) ?? 0,
+                                    },
+                                  };
+
                                   final visaData = {
                                     'title': titleController.text,
                                     'country': countryController.text,
@@ -2417,6 +2526,7 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                     'available': availableController.value,
                                     'discountEnabled': discountEnabledController.value,
                                     'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
+                                    'entryTypes': entryTypes,
                                     'type': 'visa',
                                   };
 

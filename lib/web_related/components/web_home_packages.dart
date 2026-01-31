@@ -36,7 +36,9 @@ class WebHomePackages extends StatelessWidget {
 
           final content = snapshot.data!;
           final tourPackages = content.tourPackages.values.toList();
-          final visaPackages = content.visaPackages.values.toList();
+          final visaPackages = content.visaPackages.values
+              .where((v) => v.available && (v.hasEntryTypes || v.entryTypes.isEmpty))
+              .toList();
 
           void _openTourDetails(BuildContext context, TourPackage pkg) {
             Navigator.of(context).push(
@@ -188,10 +190,8 @@ class WebHomePackages extends StatelessWidget {
                           title: visa.title,
                           subtitle: visa.country,
                           badge: visa.processingTime,
-                          priceText: visa.discountEnabled
-                              ? '${visa.currency} ${visa.discountedPrice.toStringAsFixed(0)}'
-                              : '${visa.currency} ${visa.price}',
-                          originalPriceText: visa.discountEnabled
+                          priceText: visa.priceDisplayText(visa.currency),
+                          originalPriceText: visa.discountEnabled && !visa.hasEntryTypes
                               ? '${visa.currency} ${visa.price}'
                               : null,
                           imageBadge: visa.visaType.isNotEmpty ? visa.visaType : null,

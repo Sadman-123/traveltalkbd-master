@@ -412,48 +412,106 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
     );
   }
 
+  String _formatEntryTypeLabel(String key) {
+    switch (key) {
+      case 'singleEntry': return 'Single Entry';
+      case 'doubleEntry': return 'Double Entry';
+      case 'multipleEntry': return 'Multiple Entry';
+      default: return key;
+    }
+  }
+
   Widget _buildVisaDetails(VisaPackage visa) {
-    String price = '${visa.currency} ${visa.price}';
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Price Highlight
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blue.shade50, Colors.blue.shade100],
+        // Price / Entry Types
+        if (visa.hasEntryTypes) ...[
+          const Text(
+            'Visa Prices by Entry Type',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            children: [
-              Icon(Icons.attach_money, color: Colors.blue.shade700, size: 24),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Visa Price',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  Text(
-                    price,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade50, Colors.blue.shade100],
               ),
-            ],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: visa.enabledEntryTypes.map((e) {
+                final label = _formatEntryTypeLabel(e.key);
+                final price = '${visa.currency} ${e.value.price.toStringAsFixed(0)}';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      Text(
+                        price,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ),
+        ] else ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade50, Colors.blue.shade100],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.attach_money, color: Colors.blue.shade700, size: 24),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Visa Price',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    Text(
+                      '${visa.currency} ${visa.discountEnabled ? visa.discountedPrice.toStringAsFixed(0) : visa.price}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         const Text(
           'Visa Information',

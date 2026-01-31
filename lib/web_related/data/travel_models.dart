@@ -66,6 +66,22 @@ class TourPackage {
   }
 }
 
+/// Entry type option for visa (single, double, multiple entry)
+class VisaEntryTypeOption {
+  final bool enabled;
+  final num price;
+
+  VisaEntryTypeOption({required this.enabled, required this.price});
+
+  Map<String, dynamic> toMap() => {'enabled': enabled, 'price': price};
+
+  factory VisaEntryTypeOption.fromMap(Map<String, dynamic> map) =>
+      VisaEntryTypeOption(
+        enabled: map['enabled'] ?? false,
+        price: map['price'] ?? 0,
+      );
+}
+
 class VisaPackage {
   final String id;
   final String title;
@@ -81,6 +97,8 @@ class VisaPackage {
   final bool available;
   final bool discountEnabled;
   final num discountAmount;
+  /// Entry types: singleEntry, doubleEntry, multipleEntry - each with enabled & price
+  final Map<String, VisaEntryTypeOption> entryTypes;
 
   VisaPackage({
     required this.id,
@@ -97,16 +115,44 @@ class VisaPackage {
     required this.available,
     this.discountEnabled = false,
     this.discountAmount = 0,
-  });
+    Map<String, VisaEntryTypeOption>? entryTypes,
+  }) : entryTypes = entryTypes ?? {};
 
   num get discountedPrice => discountEnabled ? (price - discountAmount).clamp(0, double.infinity) : price;
+
+  /// Whether this visa uses entry-type pricing (has at least one enabled entry type)
+  bool get hasEntryTypes => enabledEntryTypes.isNotEmpty;
+
+  /// Enabled entry types only
+  List<MapEntry<String, VisaEntryTypeOption>> get enabledEntryTypes {
+    return entryTypes.entries.where((e) => e.value.enabled).toList();
+  }
+
+  /// Lowest price among enabled entry types, or legacy price if none
+  num get displayPrice {
+    if (hasEntryTypes) {
+      final prices = enabledEntryTypes.map((e) => e.value.price).toList();
+      return prices.reduce((a, b) => a < b ? a : b);
+    }
+    return discountEnabled ? discountedPrice : price;
+  }
+
+  /// Price text for cards: "From X" if multiple entry types, else single price
+  String priceDisplayText(String currency) {
+    if (!hasEntryTypes) {
+      return '$currency ${discountEnabled ? discountedPrice.toStringAsFixed(0) : price}';
+    }
+    final count = enabledEntryTypes.length;
+    final lowest = displayPrice;
+    return count > 1 ? 'From $currency ${lowest.toStringAsFixed(0)}' : '$currency ${lowest.toStringAsFixed(0)}';
+  }
 
   factory VisaPackage.fromMap(String id, Map<String, dynamic> map) {
     // Handle photo as either String or List<String>
     final photoValue = map['photo'];
     List<String> photosList;
     String firstPhoto;
-    
+
     if (photoValue is List) {
       photosList = List<String>.from(photoValue);
       firstPhoto = photosList.isNotEmpty ? photosList[0] : '';
@@ -117,7 +163,21 @@ class VisaPackage {
       firstPhoto = '';
       photosList = [];
     }
-    
+
+    // Safe extraction - Firebase returns Map<dynamic, dynamic>, not Map<String, dynamic>
+    final entryTypesRaw = map['entryTypes'];
+    final Map<String, VisaEntryTypeOption> entryTypesMap = {};
+    if (entryTypesRaw != null && entryTypesRaw is Map) {
+      final et = Map<String, dynamic>.from(entryTypesRaw);
+      for (final e in et.entries) {
+        if (e.value is Map) {
+          entryTypesMap[e.key] = VisaEntryTypeOption.fromMap(
+            Map<String, dynamic>.from(e.value as Map),
+          );
+        }
+      }
+    }
+
     return VisaPackage(
       id: id,
       title: map['title'] ?? '',
@@ -133,6 +193,7 @@ class VisaPackage {
       available: map['available'] ?? false,
       discountEnabled: map['discountEnabled'] ?? false,
       discountAmount: map['discountAmount'] ?? 0,
+      entryTypes: entryTypesMap,
     );
   }
 }
