@@ -369,7 +369,7 @@ class _WebHomeSearchState extends State<WebHomeSearch> {
                             hintText: _isTourPackages
                                 ? 'Where do you want to go?'
                                 : 'Search visa information...',
-                            prefixIcon: const Icon(Icons.search, color: Colors.blue, size: 28),
+                            prefixIcon: const Icon(Icons.search, color: Color(0xFF9C27B0), size: 28),
                             filled: true,
                             fillColor: Colors.grey[100],
                             border: OutlineInputBorder(

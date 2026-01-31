@@ -136,7 +136,7 @@ class _PackageSearchScreenState extends State<PackageSearchScreen> {
                         ? 'Search tour packages...'
                         : 'Search visa information...',
                     prefixIcon:
-                        const Icon(Icons.search, color: Colors.blueAccent),
+                        const Icon(Icons.search, color: Colors.purple),
                     filled: true,
                     fillColor: Colors.grey[100],
                     border: OutlineInputBorder(

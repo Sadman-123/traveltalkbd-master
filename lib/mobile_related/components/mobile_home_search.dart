@@ -301,7 +301,7 @@ class _MobileHomeSearchState extends State<MobileHomeSearch> {
                               hintText: _isTourPackages
                                   ? 'Where do you want to go?'
                                   : 'Search visa information...',
-                              prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                              prefixIcon: const Icon(Icons.search, color: Colors.purple),
                               filled: true,
                               fillColor: Colors.grey[100],
                               border: OutlineInputBorder(
