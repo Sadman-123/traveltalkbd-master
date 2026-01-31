@@ -336,39 +336,12 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
                       ),
                       if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) ...[
                         const SizedBox(height: 20),
-                        Text(
-                          'Visa Entry Type',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: _selectedVisaEntryKey,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.flight_land),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          hint: const Text('Select entry type'),
-                          items: widget.visaPackage!.sortedEnabledEntryTypes.map((e) {
-                            final label = VisaPackage.formatEntryTypeLabel(e.key);
-                            final price = '${widget.visaPackage!.currency} ${e.value.price.toStringAsFixed(0)}';
-                            return DropdownMenuItem<String>(
-                              value: e.key,
-                              child: Text('$label - $price'),
-                            );
-                          }).toList(),
+                        _VisaEntrySelector(
+                          visaPackage: widget.visaPackage!,
+                          selectedKey: _selectedVisaEntryKey,
                           onChanged: _isSubmitting ? null : (v) => setState(() => _selectedVisaEntryKey = v),
                           validator: (v) {
-                            if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes && (v == null || v.isEmpty)) {
-                              return 'Please select visa entry type';
-                            }
+                            if (v == null || v.isEmpty) return 'Please select visa entry type';
                             return null;
                           },
                         ),
@@ -513,7 +486,7 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
                       if (widget.itemType == 'visa') ...[
                         const SizedBox(height: 20),
                         Text(
-                          'Visa Photo *',
+                          'Passport Photo *',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -680,6 +653,178 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Decorated visa entry type selector with selectable cards
+class _VisaEntrySelector extends StatelessWidget {
+  final VisaPackage visaPackage;
+  final String? selectedKey;
+  final ValueChanged<String?>? onChanged;
+  final FormFieldValidator<String>? validator;
+
+  const _VisaEntrySelector({
+    required this.visaPackage,
+    required this.selectedKey,
+    required this.onChanged,
+    required this.validator,
+  });
+
+  static IconData _iconForEntryType(String key) {
+    switch (key) {
+      case 'singleEntry': return Icons.looks_one_rounded;
+      case 'doubleEntry': return Icons.looks_two_rounded;
+      case 'multipleEntry': return Icons.all_inclusive_rounded;
+      default: return Icons.flight_land_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FormField<String>(
+      initialValue: selectedKey,
+      validator: validator,
+      builder: (field) {
+        final effectiveValue = field.value ?? selectedKey;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withOpacity(0.08),
+                    AppColors.accent.withOpacity(0.06),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.secondary.withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Visa Entry Type',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: visaPackage.sortedEnabledEntryTypes.map((e) {
+                      final isSelected = effectiveValue == e.key;
+                      final label = VisaPackage.formatEntryTypeLabel(e.key);
+                      final price = '${visaPackage.currency} ${e.value.price.toStringAsFixed(0)}';
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onChanged == null ? null : () {
+                            field.didChange(e.key);
+                            onChanged!(e.key);
+                          },
+                          borderRadius: BorderRadius.circular(14),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accent.withOpacity(0.15)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isSelected ? AppColors.accent : Colors.grey.shade300,
+                                width: isSelected ? 2.5 : 1,
+                              ),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(color: AppColors.accent.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 2))]
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _iconForEntryType(e.key),
+                                  size: 24,
+                                  color: isSelected ? AppColors.accent : Colors.grey[600],
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        color: isSelected ? AppColors.primary : Colors.grey[800],
+                                      ),
+                                    ),
+                                    Text(
+                                      price,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: isSelected ? AppColors.accent : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (isSelected) ...[
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.check_circle_rounded, color: AppColors.accent, size: 22),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            if (field.hasError) ...[
+              const SizedBox(height: 8),
+              Text(
+                field.errorText!,
+                style: TextStyle(color: Colors.red[700], fontSize: 13),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

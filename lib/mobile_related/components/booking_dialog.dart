@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import '../data/booking_service.dart';
 import '../data/travel_models.dart';
 
@@ -298,33 +299,12 @@ class _BookingDialogState extends State<BookingDialog> {
                 ),
                 if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) ...[
                   const SizedBox(height: 16),
-                  Text(
-                    'Visa Entry Type',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedVisaEntryKey,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.flight_land),
-                      border: OutlineInputBorder(),
-                    ),
-                    hint: const Text('Select entry type'),
-                    items: widget.visaPackage!.sortedEnabledEntryTypes.map((e) {
-                      final label = VisaPackage.formatEntryTypeLabel(e.key);
-                      final price = '${widget.visaPackage!.currency} ${e.value.price.toStringAsFixed(0)}';
-                      return DropdownMenuItem<String>(
-                        value: e.key,
-                        child: Text('$label - $price'),
-                      );
-                    }).toList(),
+                  _VisaEntrySelector(
+                    visaPackage: widget.visaPackage!,
+                    selectedKey: _selectedVisaEntryKey,
                     onChanged: _isSubmitting ? null : (v) => setState(() => _selectedVisaEntryKey = v),
                     validator: (v) {
-                      if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes && (v == null || v.isEmpty)) {
-                        return 'Please select visa entry type';
-                      }
+                      if (v == null || v.isEmpty) return 'Please select visa entry type';
                       return null;
                     },
                   ),
@@ -418,7 +398,7 @@ class _BookingDialogState extends State<BookingDialog> {
                 if (widget.itemType == 'visa') ...[
                   const SizedBox(height: 16),
                   Text(
-                    'Visa Photo *',
+                    'Passport Photo *',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -546,6 +526,176 @@ class _BookingDialogState extends State<BookingDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Decorated visa entry type selector with selectable cards (mobile layout)
+class _VisaEntrySelector extends StatelessWidget {
+  final VisaPackage visaPackage;
+  final String? selectedKey;
+  final ValueChanged<String?>? onChanged;
+  final FormFieldValidator<String>? validator;
+
+  const _VisaEntrySelector({
+    required this.visaPackage,
+    required this.selectedKey,
+    required this.onChanged,
+    required this.validator,
+  });
+
+  static IconData _iconForEntryType(String key) {
+    switch (key) {
+      case 'singleEntry': return Icons.looks_one_rounded;
+      case 'doubleEntry': return Icons.looks_two_rounded;
+      case 'multipleEntry': return Icons.all_inclusive_rounded;
+      default: return Icons.flight_land_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FormField<String>(
+      initialValue: selectedKey,
+      validator: validator,
+      builder: (field) {
+        final effectiveValue = field.value ?? selectedKey;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withOpacity(0.08),
+                    AppColors.accent.withOpacity(0.06),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.secondary.withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Visa Entry Type',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...visaPackage.sortedEnabledEntryTypes.map((e) {
+                    final isSelected = effectiveValue == e.key;
+                    final label = VisaPackage.formatEntryTypeLabel(e.key);
+                    final price = '${visaPackage.currency} ${e.value.price.toStringAsFixed(0)}';
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onChanged == null ? null : () {
+                            field.didChange(e.key);
+                            onChanged!(e.key);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.accent.withOpacity(0.15)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected ? AppColors.accent : Colors.grey.shade300,
+                                width: isSelected ? 2.5 : 1,
+                              ),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(color: AppColors.accent.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 2))]
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _iconForEntryType(e.key),
+                                  size: 26,
+                                  color: isSelected ? AppColors.accent : Colors.grey[600],
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          color: isSelected ? AppColors.primary : Colors.grey[800],
+                                        ),
+                                      ),
+                                      Text(
+                                        price,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected ? AppColors.accent : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(Icons.check_circle_rounded, color: AppColors.accent, size: 24),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            if (field.hasError) ...[
+              const SizedBox(height: 6),
+              Text(
+                field.errorText!,
+                style: TextStyle(color: Colors.red[700], fontSize: 12),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
