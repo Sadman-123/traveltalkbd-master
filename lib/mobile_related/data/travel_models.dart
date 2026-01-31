@@ -128,6 +128,22 @@ class VisaPackage {
     return entryTypes.entries.where((e) => e.value.enabled).toList();
   }
 
+  /// Enabled entry types sorted by price (lowest to highest)
+  List<MapEntry<String, VisaEntryTypeOption>> get sortedEnabledEntryTypes {
+    final list = enabledEntryTypes.toList();
+    list.sort((a, b) => a.value.price.compareTo(b.value.price));
+    return list;
+  }
+
+  static String formatEntryTypeLabel(String key) {
+    switch (key) {
+      case 'singleEntry': return 'Single Entry';
+      case 'doubleEntry': return 'Double Entry';
+      case 'multipleEntry': return 'Multiple Entry';
+      default: return key;
+    }
+  }
+
   /// Lowest price among enabled entry types, or legacy price if none
   num get displayPrice {
     if (hasEntryTypes) {

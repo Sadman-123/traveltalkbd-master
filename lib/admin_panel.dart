@@ -2061,7 +2061,6 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
     final titleController = TextEditingController(text: data?['title'] ?? '');
     final countryController = TextEditingController(text: data?['country'] ?? '');
     final currencyController = TextEditingController(text: data?['currency'] ?? 'BDT');
-    final priceController = TextEditingController(text: data?['price']?.toString() ?? '');
     final visaTypeController = TextEditingController(text: data?['visaType'] ?? '');
     final validityController = TextEditingController(text: data?['validity'] ?? '');
     final processingTimeController = TextEditingController(text: data?['processingTime'] ?? '');
@@ -2317,16 +2316,6 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                       );
                     },
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: priceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Base Price *',
-                      hintText: 'Used when no entry types are enabled',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
-                  ),
                   const SizedBox(height: 12),
                   ValueListenableBuilder<bool>(
                     valueListenable: singleEntryEnabled,
@@ -2513,12 +2502,25 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                     },
                                   };
 
+                                  // Require at least one entry type enabled with price
+                                  final enabledPrices = <num>[];
+                                  if (singleEntryEnabled.value) enabledPrices.add(num.tryParse(singleEntryPrice.text) ?? 0);
+                                  if (doubleEntryEnabled.value) enabledPrices.add(num.tryParse(doubleEntryPrice.text) ?? 0);
+                                  if (multipleEntryEnabled.value) enabledPrices.add(num.tryParse(multipleEntryPrice.text) ?? 0);
+                                  if (enabledPrices.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Enable at least one entry type with a price')),
+                                    );
+                                    return;
+                                  }
+                                  final basePrice = enabledPrices.reduce((a, b) => a < b ? a : b);
+
                                   final visaData = {
                                     'title': titleController.text,
                                     'country': countryController.text,
                                     'currency': currencyController.text,
                                     'photo': allImageUrls.length == 1 ? allImageUrls.first : allImageUrls,
-                                    'price': int.tryParse(priceController.text) ?? 0,
+                                    'price': basePrice.toInt(),
                                     'visaType': visaTypeController.text,
                                     'validity': validityController.text,
                                     'processingTime': processingTimeController.text,
@@ -2594,6 +2596,35 @@ class _VisaCard extends StatelessWidget {
     required this.onDelete,
   });
 
+  String _formatEntryTypeLabel(String key) {
+    switch (key) {
+      case 'singleEntry': return 'Single';
+      case 'doubleEntry': return 'Double';
+      case 'multipleEntry': return 'Multiple';
+      default: return key;
+    }
+  }
+
+  String _formatEntryTypePrices(Map<String, dynamic> visa) {
+    final entryTypes = visa['entryTypes'];
+    if (entryTypes == null || entryTypes is! Map) {
+      return '${visa['currency'] ?? ''} ${visa['price'] ?? 0}';
+    }
+    final et = Map<String, dynamic>.from(entryTypes);
+    final parts = <String>[];
+    for (final key in ['singleEntry', 'doubleEntry', 'multipleEntry']) {
+      final opt = et[key];
+      if (opt is Map) {
+        final m = Map<String, dynamic>.from(opt);
+        if (m['enabled'] == true) {
+          final price = m['price'] ?? 0;
+          parts.add('${_formatEntryTypeLabel(key)} ${visa['currency'] ?? ''} $price');
+        }
+      }
+    }
+    return parts.isEmpty ? '${visa['currency'] ?? ''} ${visa['price'] ?? 0}' : parts.join(' • ');
+  }
+
   Widget _buildImageWidget(dynamic photo, {double? width, double? height}) {
     String? imageUrl;
     if (photo is List && photo.isNotEmpty) {
@@ -2660,9 +2691,11 @@ class _VisaCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
-                        '${visa['currency']} ${visa['price']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      Expanded(
+                        child: Text(
+                          _formatEntryTypePrices(visa),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 14),
+                        ),
                       ),
                       const Spacer(),
                       IconButton(
@@ -3234,6 +3267,24 @@ class _BookingCard extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            if (itemType.toLowerCase() == 'visa' && (booking['visaEntryTypeLabel'] ?? '').toString().isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  (booking['visaEntryTypeLabel'] ?? '').toString(),
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(width: 12),
                             Icon(
                               Icons.calendar_today,

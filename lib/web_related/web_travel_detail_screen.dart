@@ -107,6 +107,7 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
                               itemId: widget.item.id,
                               itemTitle: widget.item.title,
                               itemType: widget.item.type,
+                              visaPackage: widget.item.type == 'visa' ? widget.item.payload as VisaPackage? : null,
                             ),
                           );
                         },
@@ -471,7 +472,7 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: visa.enabledEntryTypes.map((e) {
+              children: visa.sortedEnabledEntryTypes.map((e) {
                 final label = _formatEntryTypeLabel(e.key);
                 final price = '${visa.currency} ${e.value.price.toStringAsFixed(0)}';
                 return Padding(

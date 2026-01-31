@@ -7,17 +7,20 @@ import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'dart:typed_data';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:traveltalkbd/web_related/data/booking_service.dart';
+import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 
 class WebBookingDialog extends StatefulWidget {
   final String itemId;
   final String itemTitle;
   final String itemType;
+  final VisaPackage? visaPackage;
 
   const WebBookingDialog({
     super.key,
     required this.itemId,
     required this.itemTitle,
     required this.itemType,
+    this.visaPackage,
   });
 
   @override
@@ -35,6 +38,18 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
   bool _isSubmitting = false;
   XFile? _visaPhoto;
   bool _isUploadingPhoto = false;
+  String? _selectedVisaEntryKey;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) {
+      final sorted = widget.visaPackage!.sortedEnabledEntryTypes;
+      if (sorted.isNotEmpty) {
+        _selectedVisaEntryKey = sorted.first.key;
+      }
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -199,6 +214,8 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
         'timestamp': DateTime.now().toIso8601String(),
         'status': 'pending',
         if (visaPhotoUrl != null) 'visaPhotoUrl': visaPhotoUrl,
+        if (_selectedVisaEntryKey != null) 'visaEntryType': _selectedVisaEntryKey,
+        if (_selectedVisaEntryKey != null) 'visaEntryTypeLabel': VisaPackage.formatEntryTypeLabel(_selectedVisaEntryKey!),
       };
 
       final bookingService = BookingService();
@@ -317,6 +334,45 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
                           ],
                         ),
                       ),
+                      if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          'Visa Entry Type',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: _selectedVisaEntryKey,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.flight_land),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          hint: const Text('Select entry type'),
+                          items: widget.visaPackage!.sortedEnabledEntryTypes.map((e) {
+                            final label = VisaPackage.formatEntryTypeLabel(e.key);
+                            final price = '${widget.visaPackage!.currency} ${e.value.price.toStringAsFixed(0)}';
+                            return DropdownMenuItem<String>(
+                              value: e.key,
+                              child: Text('$label - $price'),
+                            );
+                          }).toList(),
+                          onChanged: _isSubmitting ? null : (v) => setState(() => _selectedVisaEntryKey = v),
+                          validator: (v) {
+                            if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes && (v == null || v.isEmpty)) {
+                              return 'Please select visa entry type';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 32),
                       // Form Fields in Two Columns
                       Row(

@@ -6,17 +6,20 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import '../data/booking_service.dart';
+import '../data/travel_models.dart';
 
 class BookingDialog extends StatefulWidget {
   final String itemId;
   final String itemTitle;
   final String itemType;
+  final VisaPackage? visaPackage;
 
   const BookingDialog({
     super.key,
     required this.itemId,
     required this.itemTitle,
     required this.itemType,
+    this.visaPackage,
   });
 
   @override
@@ -34,6 +37,18 @@ class _BookingDialogState extends State<BookingDialog> {
   bool _isSubmitting = false;
   XFile? _visaPhoto;
   bool _isUploadingPhoto = false;
+  String? _selectedVisaEntryKey;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) {
+      final sorted = widget.visaPackage!.sortedEnabledEntryTypes;
+      if (sorted.isNotEmpty) {
+        _selectedVisaEntryKey = sorted.first.key;
+      }
+    }
+  }
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -198,6 +213,8 @@ class _BookingDialogState extends State<BookingDialog> {
         'timestamp': DateTime.now().toIso8601String(),
         'status': 'pending',
         if (visaPhotoUrl != null) 'visaPhotoUrl': visaPhotoUrl,
+        if (_selectedVisaEntryKey != null) 'visaEntryType': _selectedVisaEntryKey,
+        if (_selectedVisaEntryKey != null) 'visaEntryTypeLabel': VisaPackage.formatEntryTypeLabel(_selectedVisaEntryKey!),
       };
 
       // Import and use the booking service
@@ -279,6 +296,39 @@ class _BookingDialogState extends State<BookingDialog> {
                         color: Colors.grey[600],
                       ),
                 ),
+                if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Visa Entry Type',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedVisaEntryKey,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.flight_land),
+                      border: OutlineInputBorder(),
+                    ),
+                    hint: const Text('Select entry type'),
+                    items: widget.visaPackage!.sortedEnabledEntryTypes.map((e) {
+                      final label = VisaPackage.formatEntryTypeLabel(e.key);
+                      final price = '${widget.visaPackage!.currency} ${e.value.price.toStringAsFixed(0)}';
+                      return DropdownMenuItem<String>(
+                        value: e.key,
+                        child: Text('$label - $price'),
+                      );
+                    }).toList(),
+                    onChanged: _isSubmitting ? null : (v) => setState(() => _selectedVisaEntryKey = v),
+                    validator: (v) {
+                      if (widget.itemType == 'visa' && widget.visaPackage != null && widget.visaPackage!.hasEntryTypes && (v == null || v.isEmpty)) {
+                        return 'Please select visa entry type';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
