@@ -35,7 +35,8 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-         flexibleSpace: Container(
+        centerTitle: false,
+        flexibleSpace: Container(
     decoration:  BoxDecoration(
       gradient: Traveltalktheme.primaryGradient
     ),
