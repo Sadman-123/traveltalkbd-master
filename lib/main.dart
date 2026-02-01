@@ -26,7 +26,8 @@ class Main extends StatelessWidget {
 
       theme: Traveltalktheme.travelTheme,
 
-     home: WelcomeHome(),
+     //home: WelcomeHome(),
+     home: AdaptiveHelper(mobile: MobileHome(), web: WebHome()),
     );
   }
 }
