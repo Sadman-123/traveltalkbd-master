@@ -4,6 +4,7 @@ import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/web_related/components/web_services_grid.dart';
+import 'package:traveltalkbd/web_related/components/web_why_choose_us_grid.dart';
 
 class WebAboutUsPage extends StatefulWidget {
   const WebAboutUsPage({super.key});
@@ -516,40 +517,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: about.whyChooseUs.map((item) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Colors.green.shade600,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                item,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    WebWhyChooseUsGrid(items: about.whyChooseUs),
                     const SizedBox(height: 50),
                     // Services
                     const Text(

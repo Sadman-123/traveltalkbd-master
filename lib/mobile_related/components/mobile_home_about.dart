@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 
@@ -354,36 +355,7 @@ class MobileHomeAbout extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              ...about.whyChooseUs.map((item) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: Colors.green.shade600,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          item,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+              _WhyChooseUsGrid(items: about.whyChooseUs),
               const SizedBox(height: 24),
               // Services
               const Text(
@@ -514,6 +486,128 @@ class MobileHomeAbout extends StatelessWidget {
   }
 }
 
+class _WhyChooseUsGrid extends StatelessWidget {
+  final List<String> items;
+
+  const _WhyChooseUsGrid({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final row1 = items.take(2).toList();
+    final row2 = items.skip(2).take(3).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (row1.isNotEmpty)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < 2; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 0 ? 6 : 0, left: i == 1 ? 6 : 0),
+                    child: i < row1.length ? _WhyChooseUsCard(item: row1[i]) : const SizedBox.shrink(),
+                  ),
+                ),
+            ],
+          ),
+        if (row2.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < 3; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: i < 2 ? 4 : 0,
+                      left: i > 0 ? 4 : 0,
+                    ),
+                    child: i < row2.length ? _WhyChooseUsCard(item: row2[i]) : const SizedBox.shrink(),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _WhyChooseUsCard extends StatefulWidget {
+  final String item;
+
+  const _WhyChooseUsCard({required this.item});
+
+  @override
+  State<_WhyChooseUsCard> createState() => _WhyChooseUsCardState();
+}
+
+class _WhyChooseUsCardState extends State<_WhyChooseUsCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        constraints: const BoxConstraints(minHeight: 160),
+        decoration: BoxDecoration(
+          color: _isHovered ? AppColors.primary : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _isHovered ? Colors.white.withOpacity(0.5) : Colors.blue.shade100,
+            width: _isHovered ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_isHovered ? 0.12 : 0.04),
+              blurRadius: _isHovered ? 10 : 6,
+              offset: Offset(0, _isHovered ? 4 : 2),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Icon(
+                Icons.check_circle_outline,
+                size: 56,
+                color: _isHovered ? Colors.white.withOpacity(0.3) : Colors.green.shade200.withOpacity(0.6),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.item,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _isHovered ? Colors.white : Colors.blue.shade900,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ServicesGrid extends StatelessWidget {
   final List<ServiceItem> services;
 
@@ -563,10 +657,17 @@ class _ServicesGrid extends StatelessWidget {
   }
 }
 
-class _ServiceCard extends StatelessWidget {
+class _ServiceCard extends StatefulWidget {
   final ServiceItem service;
 
   const _ServiceCard({required this.service});
+
+  @override
+  State<_ServiceCard> createState() => _ServiceCardState();
+}
+
+class _ServiceCardState extends State<_ServiceCard> {
+  bool _isHovered = false;
 
   static IconData _iconForService(String title) {
     final t = title.toLowerCase();
@@ -580,75 +681,82 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _iconForService(service.title);
-    return Container(
-      constraints: const BoxConstraints(minHeight: 160),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.blue.shade100, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: () {},
+    final icon = _iconForService(widget.service.title);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        constraints: const BoxConstraints(minHeight: 160),
+        decoration: BoxDecoration(
+          color: _isHovered ? AppColors.primary : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(14),
-          child: Stack(
-            children: [
-              // Faint background icon (top right)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Icon(
-                  icon,
-                  size: 56,
-                  color: Colors.grey.shade300.withOpacity(0.6),
+          border: Border.all(
+            color: _isHovered ? Colors.white.withOpacity(0.5) : Colors.blue.shade100,
+            width: _isHovered ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_isHovered ? 0.12 : 0.04),
+              blurRadius: _isHovered ? 10 : 6,
+              offset: Offset(0, _isHovered ? 4 : 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: () {},
+            borderRadius: BorderRadius.circular(14),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Icon(
+                    icon,
+                    size: 56,
+                    color: _isHovered ? Colors.white.withOpacity(0.3) : Colors.grey.shade300.withOpacity(0.6),
+                  ),
                 ),
-              ),
-              // Card content - icon, title, subtitle
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, color: Colors.blue.shade800, size: 24),
-                    const SizedBox(height: 10),
-                    Text(
-                      service.title,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade900,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (service.subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, color: _isHovered ? Colors.white : Colors.blue.shade800, size: 24),
+                      const SizedBox(height: 10),
                       Text(
-                        service.subtitle,
+                        widget.service.title,
                         style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade700,
-                          height: 1.4,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _isHovered ? Colors.white : Colors.blue.shade900,
                         ),
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    if (widget.service.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.service.subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _isHovered ? Colors.white.withOpacity(0.9) : Colors.grey.shade700,
+                            height: 1.4,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
