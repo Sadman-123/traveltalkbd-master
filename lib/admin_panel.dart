@@ -4455,7 +4455,23 @@ class _AboutUsTabState extends State<AboutUsTab> {
     
     // Lists
     final whyChooseUsController = TextEditingController(text: (_aboutUs?['whyChooseUs'] as List?)?.join(', ') ?? '');
-    final servicesController = TextEditingController(text: (_aboutUs?['services'] as List?)?.join(', ') ?? '');
+    // Services: "Title | Subtitle" per item, comma-separated (e.g. "Hotel | We can share hotel etc., Visa | Visa processing")
+    final rawServices = _aboutUs?['services'];
+    String servicesText = '';
+    if (rawServices != null && rawServices is List) {
+      servicesText = rawServices.map((item) {
+        if (item is Map) {
+          final m = Map<String, dynamic>.from(item);
+          final title = m['title']?.toString() ?? '';
+          final subtitle = m['subtitle']?.toString() ?? '';
+          return subtitle.isNotEmpty ? '$title | $subtitle' : title;
+        } else if (item is String) {
+          return item;
+        }
+        return '';
+      }).where((s) => s.isNotEmpty).join(', ');
+    }
+    final servicesController = TextEditingController(text: servicesText);
 
     showDialog(
       context: context,
@@ -4601,12 +4617,14 @@ class _AboutUsTabState extends State<AboutUsTab> {
                             maxLines: 3,
                           ),
                           const SizedBox(height: 16),
-                          const Text('Services (comma-separated)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Text('Services (comma-separated, use | for subtitle)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          const Text('Format: Title | Subtitle (e.g. Hotel | We can share hotel etc., Visa | Visa processing)', style: TextStyle(fontSize: 12, color: Colors.grey)),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: servicesController,
-                            decoration: const InputDecoration(hintText: 'Service 1, Service 2, Service 3...'),
-                            maxLines: 3,
+                            decoration: const InputDecoration(hintText: 'Hotel | We can share hotel etc., Visa | Visa processing...'),
+                            maxLines: 4,
                           ),
                           const SizedBox(height: 24),
                           ElevatedButton(
@@ -4618,11 +4636,19 @@ class _AboutUsTabState extends State<AboutUsTab> {
                                       .map((e) => e.trim())
                                       .where((e) => e.isNotEmpty)
                                       .toList();
-                                  final services = servicesController.text
-                                      .split(',')
-                                      .map((e) => e.trim())
-                                      .where((e) => e.isNotEmpty)
-                                      .toList();
+                                  // Parse services: "Title | Subtitle" or just "Title"
+                                  final services = <Map<String, String>>[];
+                                  for (final part in servicesController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty)) {
+                                    final pipeIdx = part.indexOf('|');
+                                    if (pipeIdx >= 0) {
+                                      services.add({
+                                        'title': part.substring(0, pipeIdx).trim(),
+                                        'subtitle': part.substring(pipeIdx + 1).trim(),
+                                      });
+                                    } else {
+                                      services.add({'title': part, 'subtitle': ''});
+                                    }
+                                  }
 
                                   final aboutUsData = {
                                     'companyName': companyNameController.text,

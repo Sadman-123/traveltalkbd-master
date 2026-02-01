@@ -353,6 +353,14 @@ class Employee {
   }
 }
 
+/// Service item with title and subtitle (e.g. Hotel | We can share hotel etc.)
+class ServiceItem {
+  final String title;
+  final String subtitle;
+
+  ServiceItem({required this.title, this.subtitle = ''});
+}
+
 class AboutInfo {
   final String companyName;
   final String tagline;
@@ -360,7 +368,7 @@ class AboutInfo {
   final String mission;
   final String vision;
   final List<String> whyChooseUs;
-  final List<String> services;
+  final List<ServiceItem> services; // Each service has title + subtitle
   final Map<String, dynamic> contact;
   final Map<String, dynamic> socialLinks;
   final int establishedYear;
@@ -405,6 +413,23 @@ class AboutInfo {
       }
     }
 
+    // Parse services - supports new format [{title, subtitle}] or legacy [string]
+    final servicesList = <ServiceItem>[];
+    final rawServices = map['services'];
+    if (rawServices != null && rawServices is List) {
+      for (final item in rawServices) {
+        if (item is Map) {
+          final m = Map<String, dynamic>.from(item);
+          servicesList.add(ServiceItem(
+            title: m['title']?.toString() ?? '',
+            subtitle: m['subtitle']?.toString() ?? '',
+          ));
+        } else if (item is String && item.isNotEmpty) {
+          servicesList.add(ServiceItem(title: item));
+        }
+      }
+    }
+
     return AboutInfo(
       companyName: map['companyName'] ?? '',
       tagline: map['tagline'] ?? '',
@@ -412,7 +437,7 @@ class AboutInfo {
       mission: map['mission'] ?? '',
       vision: map['vision'] ?? '',
       whyChooseUs: List<String>.from(map['whyChooseUs'] ?? const []),
-      services: List<String>.from(map['services'] ?? const []),
+      services: servicesList,
       contact: Map<String, dynamic>.from(map['contact'] ?? const {}),
       socialLinks: Map<String, dynamic>.from(map['socialLinks'] ?? const {}),
       establishedYear: map['establishedYear'] ?? 0,

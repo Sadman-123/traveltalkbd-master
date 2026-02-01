@@ -394,17 +394,7 @@ class MobileHomeAbout extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.2,
-                children: about.services.map((item) {
-                  return _ServiceCard(service: item);
-                }).toList(),
-              ),
+              _ServicesGrid(services: about.services),
               const SizedBox(height: 24),
               // Documents Section
               if (about.documents.isNotEmpty) ...[
@@ -524,48 +514,139 @@ class MobileHomeAbout extends StatelessWidget {
   }
 }
 
-class _ServiceCard extends StatelessWidget {
-  final String service;
+class _ServicesGrid extends StatelessWidget {
+  final List<ServiceItem> services;
 
-  const _ServiceCard({required this.service});
+  const _ServicesGrid({required this.services});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.blue.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.blue.shade100),
-      ),
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.15),
-      child: InkWell(
-        onTap: () {},
-        borderRadius: BorderRadius.circular(12),
-        hoverColor: const Color(0xFFE10098).withOpacity(0.2),
-        splashColor: const Color(0xFF4A1E6A).withOpacity(0.4),
-        highlightColor: const Color(0xFFE10098).withOpacity(0.25),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    final row1 = services.take(2).toList();
+    final row2 = services.skip(2).take(3).toList();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (row1.isNotEmpty)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.work_outline,
-                color: Colors.blue.shade700,
-                size: 28,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                service,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blue.shade900,
+              for (int i = 0; i < 2; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: i == 0 ? 6 : 0, left: i == 1 ? 6 : 0),
+                    child: i < row1.length ? _ServiceCard(service: row1[i]) : const SizedBox.shrink(),
+                  ),
                 ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+            ],
+          ),
+        if (row2.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < 3; i++)
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: i < 2 ? 4 : 0,
+                      left: i > 0 ? 4 : 0,
+                    ),
+                    child: i < row2.length ? _ServiceCard(service: row2[i]) : const SizedBox.shrink(),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final ServiceItem service;
+
+  const _ServiceCard({required this.service});
+
+  static IconData _iconForService(String title) {
+    final t = title.toLowerCase();
+    if (t.contains('visa')) return Icons.description_outlined;
+    if (t.contains('tour') || t.contains('package')) return Icons.luggage_outlined;
+    if (t.contains('hotel')) return Icons.hotel_outlined;
+    if (t.contains('air') || t.contains('flight') || t.contains('ticket')) return Icons.flight_outlined;
+    if (t.contains('transfer') || t.contains('car') || t.contains('transport')) return Icons.directions_car_outlined;
+    return Icons.work_outline;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _iconForService(service.title);
+    return Container(
+      constraints: const BoxConstraints(minHeight: 160),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.blue.shade100, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(14),
+          child: Stack(
+            children: [
+              // Faint background icon (top right)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Icon(
+                  icon,
+                  size: 56,
+                  color: Colors.grey.shade300.withOpacity(0.6),
+                ),
+              ),
+              // Card content - icon, title, subtitle
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, color: Colors.blue.shade800, size: 24),
+                    const SizedBox(height: 10),
+                    Text(
+                      service.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade900,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (service.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        service.subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                          height: 1.4,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),

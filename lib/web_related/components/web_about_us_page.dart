@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
-import 'package:traveltalkbd/web_related/data/travel_data_service.dart';
-import 'package:traveltalkbd/web_related/data/travel_models.dart';
+import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
+import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
+import 'package:traveltalkbd/web_related/components/web_services_grid.dart';
 
 class WebAboutUsPage extends StatefulWidget {
   const WebAboutUsPage({super.key});
@@ -559,41 +560,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: about.services.map((item) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.work_outline,
-                                color: Colors.blue.shade700,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                item,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.blue.shade900,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    WebServicesGrid(services: about.services),
                     const SizedBox(height: 50),
                     // Documents Section
                     if (about.documents.isNotEmpty) ...[
