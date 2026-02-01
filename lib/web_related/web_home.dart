@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
@@ -22,9 +23,18 @@ class _WebHomeState extends State<WebHome> {
   final GlobalKey _destinationsKey = GlobalKey();
   final GlobalKey _packagesKey = GlobalKey();
   final AuthService _auth = AuthService();
+  StreamSubscription? _authSubscription;
 
   late final Future<void> _preloadFuture =
       TravelDataService.getContent().then((_) {});
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = _auth.authStateChanges.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   void _scrollToSection(GlobalKey key) {
     final context = key.currentContext;
@@ -65,12 +75,32 @@ class _WebHomeState extends State<WebHome> {
   }
 
   Future<void> _signOut() async {
-    await _auth.signOut();
-    setState(() {});
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _auth.signOut();
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }

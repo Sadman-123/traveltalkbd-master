@@ -72,14 +72,27 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
         title: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,),
         actions: [
           TextButton.icon(
-            onPressed: () => Get.offAllNamed('/'),
-            icon: const Icon(Icons.home, color: Colors.white, size: 20),
-            label: const Text('Site', style: TextStyle(color: Colors.white)),
-          ),
-          TextButton.icon(
             onPressed: () async {
-              await AuthService().signOut();
-              Get.offAllNamed('/admin');
+              final confirmed = await Get.dialog<bool>(
+                AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Are you sure you want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Get.back(result: false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Get.back(result: true),
+                      child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await AuthService().signOut();
+                Get.offAllNamed('/');
+              }
             },
             icon: const Icon(Icons.logout, color: Colors.white, size: 20),
             label: const Text('Logout', style: TextStyle(color: Colors.white)),

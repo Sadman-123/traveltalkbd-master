@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
+import 'package:traveltalkbd/screens/auth/login_screen.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'data/travel_models.dart';
 import 'components/booking_dialog.dart';
 
 class TravelDetailScreen extends StatefulWidget {
   final SearchItem item;
+  final bool isAlreadyBooked;
 
-  const TravelDetailScreen({super.key, required this.item});
+  const TravelDetailScreen({super.key, required this.item, this.isAlreadyBooked = false});
 
   @override
   State<TravelDetailScreen> createState() => _TravelDetailScreenState();
@@ -104,7 +105,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
               ),
             ),
           ),
-          // Fixed Book Now Button
+          // Fixed Book Now / Booked Successfully Button
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -121,9 +122,13 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
+                  onPressed: widget.isAlreadyBooked ? null : () async {
                     if (!AuthService().isSignedIn) {
-                      final result = await Get.toNamed<bool>('/login');
+                      final result = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(returnToBooking: true),
+                        ),
+                      );
                       if (!mounted || result != true) return;
                     }
                     if (!mounted) return;
@@ -134,6 +139,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                         itemTitle: widget.item.title,
                         itemType: widget.item.type,
                         visaPackage: widget.item.type == 'visa' ? widget.item.payload as VisaPackage? : null,
+                        itemImageUrl: widget.item.imageUrl,
                       ),
                     );
                   },
@@ -142,17 +148,18 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    backgroundColor: Colors.purple,
+                    backgroundColor: widget.isAlreadyBooked ? Colors.green : Colors.purple,
+                    disabledBackgroundColor: Colors.green.shade300,
                     elevation: 4,
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.book_online, size: 24),
-                      SizedBox(width: 10),
+                      Icon(widget.isAlreadyBooked ? Icons.check_circle : Icons.book_online, size: 24),
+                      const SizedBox(width: 10),
                       Text(
-                        'Book Now',
-                        style: TextStyle(
+                        widget.isAlreadyBooked ? 'Booked Successfully' : 'Book Now',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),

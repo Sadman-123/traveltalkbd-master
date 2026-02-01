@@ -149,6 +149,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: Traveltalktheme.primaryGradient,
@@ -162,17 +163,69 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
         ),
         elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(isWeb ? 40 : 20),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 500),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // trv2.png background overlay (scaled down)
+          Positioned.fill(
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: 0.5,
+                heightFactor: 0.5,
+                child: Image.asset(
+                  'assets/trv2.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+          // Gradient overlay for readability
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.5),
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.85),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
+              : SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + kToolbarHeight + (isWeb ? 24 : 16),
+                    left: isWeb ? 24 : 16,
+                    right: isWeb ? 24 : 16,
+                    bottom: isWeb ? 24 : 16,
+                  ),
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         GestureDetector(
@@ -238,7 +291,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
+                            color: AppColors.darkText,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -333,6 +386,8 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                 ),
               ),
             ),
+        ],
+      ),
     );
   }
 }

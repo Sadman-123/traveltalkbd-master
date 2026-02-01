@@ -15,6 +15,7 @@ class WebBookingDialog extends StatefulWidget {
   final String itemTitle;
   final String itemType;
   final VisaPackage? visaPackage;
+  final String? itemImageUrl;
 
   const WebBookingDialog({
     super.key,
@@ -22,6 +23,7 @@ class WebBookingDialog extends StatefulWidget {
     required this.itemTitle,
     required this.itemType,
     this.visaPackage,
+    this.itemImageUrl,
   });
 
   @override
@@ -226,6 +228,7 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
         'itemTitle': widget.itemTitle,
         'itemType': widget.itemType,
         if (userId != null) 'userId': userId,
+        if (widget.itemImageUrl != null && widget.itemImageUrl!.isNotEmpty) 'itemImageUrl': widget.itemImageUrl,
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),

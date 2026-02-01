@@ -10,6 +10,7 @@ import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/mobile_home.dart';
 import 'package:traveltalkbd/screens/auth/login_screen.dart';
 import 'package:traveltalkbd/screens/auth/register_screen.dart';
+import 'package:traveltalkbd/screens/booking_detail_screen.dart';
 import 'package:traveltalkbd/screens/my_bookings_screen.dart';
 import 'package:traveltalkbd/screens/my_profile_screen.dart';
 import 'package:traveltalkbd/web_related/web_home.dart';
@@ -57,7 +58,10 @@ class Main extends StatelessWidget {
         ),
         GetPage(
           name: '/login',
-          page: () => const LoginScreen(),
+          page: () {
+            final args = Get.arguments as Map<String, dynamic>?;
+            return LoginScreen(returnToBooking: args?['returnToBooking'] == true);
+          },
         ),
         GetPage(
           name: '/register',
@@ -70,6 +74,13 @@ class Main extends StatelessWidget {
         GetPage(
           name: '/bookings',
           page: () => const MyBookingsScreen(),
+        ),
+        GetPage(
+          name: '/booking-detail',
+          page: () {
+            final args = Get.arguments as Map<String, dynamic>?;
+            return BookingDetailScreen(booking: args ?? {});
+          },
         ),
       ],
     );

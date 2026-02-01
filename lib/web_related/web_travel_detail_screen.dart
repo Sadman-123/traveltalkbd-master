@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
+import 'package:traveltalkbd/screens/auth/login_screen.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/web_related/components/web_booking_dialog.dart';
 
 class WebTravelDetailScreen extends StatefulWidget {
   final SearchItem item;
+  final bool isAlreadyBooked;
 
-  const WebTravelDetailScreen({super.key, required this.item});
+  const WebTravelDetailScreen({super.key, required this.item, this.isAlreadyBooked = false});
 
   @override
   State<WebTravelDetailScreen> createState() => _WebTravelDetailScreenState();
@@ -99,13 +100,17 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
                     // Details Section
                     details,
                     const SizedBox(height: 32),
-                    // Book Now Button
+                    // Book Now / Booked Successfully Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () async {
+                        onPressed: widget.isAlreadyBooked ? null : () async {
                           if (!AuthService().isSignedIn) {
-                            final result = await Get.toNamed<bool>('/login');
+                            final result = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(returnToBooking: true),
+                              ),
+                            );
                             if (!mounted || result != true) return;
                           }
                           if (!mounted) return;
@@ -116,6 +121,7 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
                               itemTitle: widget.item.title,
                               itemType: widget.item.type,
                               visaPackage: widget.item.type == 'visa' ? widget.item.payload as VisaPackage? : null,
+                              itemImageUrl: widget.item.imageUrl,
                             ),
                           );
                         },
@@ -125,16 +131,17 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 4,
-                          backgroundColor: Colors.blue.shade700,
+                          backgroundColor: widget.isAlreadyBooked ? Colors.green : Colors.blue.shade700,
+                          disabledBackgroundColor: Colors.green.shade300,
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.book_online, size: 24),
-                            SizedBox(width: 10),
+                            Icon(widget.isAlreadyBooked ? Icons.check_circle : Icons.book_online, size: 24),
+                            const SizedBox(width: 10),
                             Text(
-                              'Book Now',
-                              style: TextStyle(
+                              widget.isAlreadyBooked ? 'Booked Successfully' : 'Book Now',
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),

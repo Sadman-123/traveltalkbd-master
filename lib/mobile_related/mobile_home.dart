@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
@@ -22,6 +23,21 @@ class _MobileHomeState extends State<MobileHome> {
   final GlobalKey _packagesKey = GlobalKey();
   final GlobalKey _aboutKey = GlobalKey();
   final AuthService _auth = AuthService();
+  StreamSubscription? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = _auth.authStateChanges.listen((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   void _scrollToSection(GlobalKey key) {
     Navigator.pop(context); // Close drawer
@@ -40,15 +56,15 @@ class _MobileHomeState extends State<MobileHome> {
     });
   }
 
-  void _navigateToLogin() {
-    Navigator.pop(context);
+  void _navigateToLogin({bool closeDrawer = true}) {
+    if (closeDrawer) Navigator.pop(context);
     Get.toNamed('/login')?.then((_) => setState(() {}));
   }
 
   void _navigateToMyBookings() {
     Navigator.pop(context);
     if (!_auth.isSignedIn) {
-      _navigateToLogin();
+      _navigateToLogin(closeDrawer: false);
       return;
     }
     Get.toNamed('/bookings');
@@ -57,7 +73,7 @@ class _MobileHomeState extends State<MobileHome> {
   void _navigateToMyProfile() {
     Navigator.pop(context);
     if (!_auth.isSignedIn) {
-      _navigateToLogin();
+      _navigateToLogin(closeDrawer: false);
       return;
     }
     Get.toNamed('/profile')?.then((_) => setState(() {}));
@@ -65,8 +81,27 @@ class _MobileHomeState extends State<MobileHome> {
 
   Future<void> _signOut() async {
     Navigator.pop(context);
-    await _auth.signOut();
-    setState(() {});
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await _auth.signOut();
+      setState(() {});
+    }
   }
 
   @override

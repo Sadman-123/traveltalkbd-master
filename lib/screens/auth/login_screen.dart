@@ -7,11 +7,13 @@ import 'package:traveltalkbd/services/auth_service.dart';
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onSuccess;
   final VoidCallback? onRegisterTap;
+  final bool returnToBooking;
 
   const LoginScreen({
     super.key,
     this.onSuccess,
     this.onRegisterTap,
+    this.returnToBooking = false,
   });
 
   @override
@@ -25,6 +27,21 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (AuthService().isSignedIn) {
+        if (widget.returnToBooking || Get.arguments?['returnToBooking'] == true) {
+          Get.back(result: true);
+        } else {
+          Get.offAllNamed('/');
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -46,7 +63,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (mounted) {
         widget.onSuccess?.call();
-        Get.back(result: true);
+        final returnToBooking = widget.returnToBooking || Get.arguments?['returnToBooking'] == true;
+        if (returnToBooking) {
+          Get.back(result: true);
+        } else {
+          Get.offAllNamed('/');
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -86,44 +108,68 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.of(context).size.width > 600;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary.withOpacity(0.1),
-              AppColors.accent.withOpacity(0.05),
-            ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // trv2.png background
+          Positioned.fill(
+            child: Center(
+              child: FractionallySizedBox(
+                widthFactor: 0.5,
+                heightFactor: 0.5,
+                child: Image.asset(
+                  'assets/trv2.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Card(
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+          // Gradient overlay for readability
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.5),
+                    Colors.black.withOpacity(0.7),
+                    Colors.black.withOpacity(0.85),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          SafeArea(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Get.back(),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
+                ),
+                Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                           Icon(
                             Icons.login_rounded,
                             size: isWeb ? 56 : 48,
@@ -251,15 +297,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                        ],
+                            ],
+                            ),
+                          ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
