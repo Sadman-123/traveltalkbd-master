@@ -475,7 +475,13 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: visa.sortedEnabledEntryTypes.map((e) {
                 final label = _formatEntryTypeLabel(e.key);
-                final price = '${visa.currency} ${e.value.price.toStringAsFixed(0)}';
+                num displayPrice = e.value.price;
+                if (visa.discountEnabled && visa.discountPercent > 0) {
+                  displayPrice = (e.value.price * (1 - visa.discountPercent / 100)).clamp(0, double.infinity);
+                } else if (visa.discountEnabled && visa.discountAmount > 0) {
+                  displayPrice = (e.value.price - visa.discountAmount).clamp(0, double.infinity);
+                }
+                final price = '${visa.currency} ${displayPrice.toStringAsFixed(0)}';
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(

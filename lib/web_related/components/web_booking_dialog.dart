@@ -745,7 +745,13 @@ class _VisaEntrySelector extends StatelessWidget {
                     children: visaPackage.sortedEnabledEntryTypes.map((e) {
                       final isSelected = effectiveValue == e.key;
                       final label = VisaPackage.formatEntryTypeLabel(e.key);
-                      final price = '${visaPackage.currency} ${e.value.price.toStringAsFixed(0)}';
+                      num displayPrice = e.value.price;
+                      if (visaPackage.discountEnabled && visaPackage.discountPercent > 0) {
+                        displayPrice = (e.value.price * (1 - visaPackage.discountPercent / 100)).clamp(0, double.infinity);
+                      } else if (visaPackage.discountEnabled && visaPackage.discountAmount > 0) {
+                        displayPrice = (e.value.price - visaPackage.discountAmount).clamp(0, double.infinity);
+                      }
+                      final price = '${visaPackage.currency} ${displayPrice.toStringAsFixed(0)}';
                       return Material(
                         color: Colors.transparent,
                         child: InkWell(

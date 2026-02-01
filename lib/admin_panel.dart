@@ -1338,7 +1338,7 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
     final ratingController = TextEditingController(text: data?['rating']?.toString() ?? '4.5');
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
     final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
-    final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
+    final discountPercentController = TextEditingController(text: data?['discountPercent']?.toString() ?? data?['discountAmount']?.toString() ?? '0');
     
     // Handle images - can be single URL string or list of URLs
     List<String> imageUrls = [];
@@ -1602,10 +1602,10 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
                           Padding(
                             padding: const EdgeInsets.only(left: 16, top: 8),
                             child: TextFormField(
-                              controller: discountAmountController,
+                              controller: discountPercentController,
                               decoration: const InputDecoration(
-                                labelText: 'Discount Amount',
-                                hintText: 'Amount to subtract from price',
+                                labelText: 'Discount (%)',
+                                hintText: 'e.g. 10 for 10% off',
                               ),
                               keyboardType: TextInputType.number,
                             ),
@@ -1710,7 +1710,7 @@ class _TourPackagesTabState extends State<TourPackagesTab> {
                                     'rating': double.tryParse(ratingController.text) ?? 4.5,
                                     'available': availableController.value,
                                     'discountEnabled': discountEnabledController.value,
-                                    'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
+                                    'discountPercent': num.tryParse(discountPercentController.text) ?? 0,
                                     'type': 'tour',
                                   };
 
@@ -2069,7 +2069,7 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
     );
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
     final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
-    final discountAmountController = TextEditingController(text: data?['discountAmount']?.toString() ?? '0');
+    final discountPercentController = TextEditingController(text: data?['discountPercent']?.toString() ?? data?['discountAmount']?.toString() ?? '0');
 
     // Entry types: single, double, multiple - safe extraction (Firebase returns Map<dynamic, dynamic>)
     final entryTypesRaw = data?['entryTypes'];
@@ -2367,10 +2367,10 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                           Padding(
                             padding: const EdgeInsets.only(left: 16, top: 8),
                             child: TextFormField(
-                              controller: discountAmountController,
+                              controller: discountPercentController,
                               decoration: const InputDecoration(
-                                labelText: 'Discount Amount',
-                                hintText: 'Amount to subtract from price',
+                                labelText: 'Discount (%)',
+                                hintText: 'e.g. 10 for 10% off',
                               ),
                               keyboardType: TextInputType.number,
                             ),
@@ -2527,7 +2527,7 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                     'requiredDocuments': documents,
                                     'available': availableController.value,
                                     'discountEnabled': discountEnabledController.value,
-                                    'discountAmount': num.tryParse(discountAmountController.text) ?? 0,
+                                    'discountPercent': num.tryParse(discountPercentController.text) ?? 0,
                                     'entryTypes': entryTypes,
                                     'type': 'visa',
                                   };

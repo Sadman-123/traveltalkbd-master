@@ -12,6 +12,7 @@ class TourPackage {
   final bool available;
   final bool discountEnabled;
   final num discountAmount;
+  final num discountPercent;
 
   TourPackage({
     required this.id,
@@ -27,9 +28,16 @@ class TourPackage {
     required this.available,
     this.discountEnabled = false,
     this.discountAmount = 0,
+    this.discountPercent = 0,
   });
 
-  num get discountedPrice => discountEnabled ? (price - discountAmount).clamp(0, double.infinity) : price;
+  num get discountedPrice {
+    if (!discountEnabled) return price;
+    if (discountPercent > 0) {
+      return (price * (1 - discountPercent / 100)).clamp(0, double.infinity);
+    }
+    return (price - discountAmount).clamp(0, double.infinity);
+  }
 
   factory TourPackage.fromMap(String id, Map<String, dynamic> map) {
     // Handle photo as either String or List<String>
@@ -62,6 +70,7 @@ class TourPackage {
       available: map['available'] ?? false,
       discountEnabled: map['discountEnabled'] ?? false,
       discountAmount: map['discountAmount'] ?? 0,
+      discountPercent: map['discountPercent'] ?? 0,
     );
   }
 }
@@ -97,6 +106,7 @@ class VisaPackage {
   final bool available;
   final bool discountEnabled;
   final num discountAmount;
+  final num discountPercent;
   /// Entry types: singleEntry, doubleEntry, multipleEntry - each with enabled & price
   final Map<String, VisaEntryTypeOption> entryTypes;
 
@@ -115,10 +125,17 @@ class VisaPackage {
     required this.available,
     this.discountEnabled = false,
     this.discountAmount = 0,
+    this.discountPercent = 0,
     Map<String, VisaEntryTypeOption>? entryTypes,
   }) : entryTypes = entryTypes ?? {};
 
-  num get discountedPrice => discountEnabled ? (price - discountAmount).clamp(0, double.infinity) : price;
+  num get discountedPrice {
+    if (!discountEnabled) return price;
+    if (discountPercent > 0) {
+      return (price * (1 - discountPercent / 100)).clamp(0, double.infinity);
+    }
+    return (price - discountAmount).clamp(0, double.infinity);
+  }
 
   /// Whether this visa uses entry-type pricing (has at least one enabled entry type)
   bool get hasEntryTypes => enabledEntryTypes.isNotEmpty;
@@ -144,11 +161,18 @@ class VisaPackage {
     }
   }
 
-  /// Lowest price among enabled entry types, or legacy price if none
+  /// Lowest price among enabled entry types (with discount applied), or legacy price if none
   num get displayPrice {
     if (hasEntryTypes) {
       final prices = enabledEntryTypes.map((e) => e.value.price).toList();
-      return prices.reduce((a, b) => a < b ? a : b);
+      final lowest = prices.reduce((a, b) => a < b ? a : b);
+      if (discountEnabled && discountPercent > 0) {
+        return (lowest * (1 - discountPercent / 100)).clamp(0, double.infinity);
+      }
+      if (discountEnabled && discountAmount > 0) {
+        return (lowest - discountAmount).clamp(0, double.infinity);
+      }
+      return lowest;
     }
     return discountEnabled ? discountedPrice : price;
   }
@@ -209,6 +233,7 @@ class VisaPackage {
       available: map['available'] ?? false,
       discountEnabled: map['discountEnabled'] ?? false,
       discountAmount: map['discountAmount'] ?? 0,
+      discountPercent: map['discountPercent'] ?? 0,
       entryTypes: entryTypesMap,
     );
   }
