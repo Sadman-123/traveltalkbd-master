@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +10,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:traveltalkbd/app_splash_gate.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
+import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:traveltalkbd/services/home_settings_service.dart';
 import 'package:http/http.dart' as http;
@@ -68,6 +70,22 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
   ),
         centerTitle: false,
         title: SvgPicture.asset('assets/logo.svg',height: 100,width: 150,color: Colors.white,),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Get.offAllNamed('/'),
+            icon: const Icon(Icons.home, color: Colors.white, size: 20),
+            label: const Text('Site', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              await AuthService().signOut();
+              Get.offAllNamed('/admin');
+            },
+            icon: const Icon(Icons.logout, color: Colors.white, size: 20),
+            label: const Text('Logout', style: TextStyle(color: Colors.white)),
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           labelColor: Colors.white,
           unselectedLabelColor: Colors.black,

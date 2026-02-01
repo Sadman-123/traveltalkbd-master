@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
+import 'package:traveltalkbd/diy_components/user_avatar.dart';
 import 'package:traveltalkbd/app_splash_gate.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
+import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/web_related/components/web_home_search.dart';
 import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
 import 'package:traveltalkbd/web_related/components/web_home_packages.dart';
@@ -18,6 +21,7 @@ class _WebHomeState extends State<WebHome> {
   final GlobalKey _homeKey = GlobalKey();
   final GlobalKey _destinationsKey = GlobalKey();
   final GlobalKey _packagesKey = GlobalKey();
+  final AuthService _auth = AuthService();
 
   late final Future<void> _preloadFuture =
       TravelDataService.getContent().then((_) {});
@@ -38,6 +42,31 @@ class _WebHomeState extends State<WebHome> {
       context,
       MaterialPageRoute(builder: (context) => const WebAboutUsPage()),
     );
+  }
+
+  void _navigateToLogin() {
+    Get.toNamed('/login')?.then((_) => setState(() {}));
+  }
+
+  void _navigateToMyBookings() {
+    if (!_auth.isSignedIn) {
+      _navigateToLogin();
+      return;
+    }
+    Get.toNamed('/bookings')?.then((_) => setState(() {}));
+  }
+
+  void _navigateToMyProfile() {
+    if (!_auth.isSignedIn) {
+      _navigateToLogin();
+      return;
+    }
+    Get.toNamed('/profile')?.then((_) => setState(() {}));
+  }
+
+  Future<void> _signOut() async {
+    await _auth.signOut();
+    setState(() {});
   }
 
   @override
@@ -103,6 +132,82 @@ class _WebHomeState extends State<WebHome> {
               style: TextStyle(fontSize: 16,color: Colors.white),
             ),
           ),
+          const SizedBox(width: 8),
+          _auth.isSignedIn
+              ? PopupMenuButton<String>(
+                  offset: const Offset(0, 48),
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'profile':
+                        _navigateToMyProfile();
+                        break;
+                      case 'bookings':
+                        _navigateToMyBookings();
+                        break;
+                      case 'logout':
+                        _signOut();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'profile',
+                      child: ListTile(
+                        leading: Icon(Icons.person_outline),
+                        title: Text('Profile'),
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'bookings',
+                      child: ListTile(
+                        leading: Icon(Icons.bookmark_border),
+                        title: Text('Manage Booking'),
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: ListTile(
+                        leading: Icon(Icons.logout, color: Colors.red),
+                        title: Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                  child: FutureBuilder<Map<String, dynamic>?>(
+                    future: _auth.getCurrentUserProfile(),
+                    builder: (context, snapshot) {
+                      final photoUrl = snapshot.data?['photoUrl'] as String? ?? _auth.currentUser?.photoURL;
+                      final name = snapshot.data?['displayName'] as String? ?? _auth.currentUser?.displayName ?? _auth.currentUser?.email ?? '';
+                      final initials = name.trim().isNotEmpty ? name.trim().substring(0, 1) : null;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: UserAvatar(
+                          photoUrl: photoUrl,
+                          initials: initials,
+                          size: 36,
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : TextButton(
+                  onPressed: _navigateToLogin,
+                  child: const Text(
+                    'Login',
+                    style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
           const SizedBox(width: 16),
         ],
       ),

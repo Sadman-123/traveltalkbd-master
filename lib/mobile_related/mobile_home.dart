@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
+import 'package:traveltalkbd/diy_components/user_avatar.dart';
 import 'package:traveltalkbd/app_splash_gate.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/components/mobile_home_about.dart';
@@ -7,6 +9,7 @@ import 'package:traveltalkbd/mobile_related/components/mobile_home_destinition.d
 import 'package:traveltalkbd/mobile_related/components/mobile_home_packages.dart';
 import 'package:traveltalkbd/mobile_related/components/mobile_home_search.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
+import 'package:traveltalkbd/services/auth_service.dart';
 
 class MobileHome extends StatefulWidget {
   @override
@@ -18,6 +21,7 @@ class _MobileHomeState extends State<MobileHome> {
   final GlobalKey _destinationsKey = GlobalKey();
   final GlobalKey _packagesKey = GlobalKey();
   final GlobalKey _aboutKey = GlobalKey();
+  final AuthService _auth = AuthService();
 
   void _scrollToSection(GlobalKey key) {
     Navigator.pop(context); // Close drawer
@@ -34,6 +38,35 @@ class _MobileHomeState extends State<MobileHome> {
         );
       }
     });
+  }
+
+  void _navigateToLogin() {
+    Navigator.pop(context);
+    Get.toNamed('/login')?.then((_) => setState(() {}));
+  }
+
+  void _navigateToMyBookings() {
+    Navigator.pop(context);
+    if (!_auth.isSignedIn) {
+      _navigateToLogin();
+      return;
+    }
+    Get.toNamed('/bookings');
+  }
+
+  void _navigateToMyProfile() {
+    Navigator.pop(context);
+    if (!_auth.isSignedIn) {
+      _navigateToLogin();
+      return;
+    }
+    Get.toNamed('/profile')?.then((_) => setState(() {}));
+  }
+
+  Future<void> _signOut() async {
+    Navigator.pop(context);
+    await _auth.signOut();
+    setState(() {});
   }
 
   @override
@@ -92,6 +125,52 @@ class _MobileHomeState extends State<MobileHome> {
                       ),
                     ),
                   ),
+                  if (_auth.isSignedIn) ...[
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GestureDetector(
+                        onTap: _navigateToMyProfile,
+                        child: FutureBuilder<Map<String, dynamic>?>(
+                          future: _auth.getCurrentUserProfile(),
+                          builder: (context, snapshot) {
+                            final photoUrl = snapshot.data?['photoUrl'] as String? ?? _auth.currentUser?.photoURL;
+                            return Row(
+                              children: [
+                                UserAvatar(photoUrl: photoUrl, size: 56, showBorder: true),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _auth.currentUser?.displayName ?? _auth.currentUser?.email ?? 'My Profile',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        _auth.currentUser?.email ?? '',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.8),
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   _DrawerItem(
                     icon: Icons.home_rounded,
@@ -113,6 +192,28 @@ class _MobileHomeState extends State<MobileHome> {
                     label: 'About Us',
                     onTap: () => _scrollToSection(_aboutKey),
                   ),
+                  const Divider(color: Colors.white54, height: 24),
+                  _DrawerItem(
+                    icon: Icons.bookmark_border,
+                    label: 'My Bookings',
+                    onTap: _navigateToMyBookings,
+                  ),
+                  _DrawerItem(
+                    icon: Icons.person_outline,
+                    label: 'My Profile',
+                    onTap: _navigateToMyProfile,
+                  ),
+                  _auth.isSignedIn
+                      ? _DrawerItem(
+                          icon: Icons.logout,
+                          label: 'Logout',
+                          onTap: _signOut,
+                        )
+                      : _DrawerItem(
+                          icon: Icons.login,
+                          label: 'Login',
+                          onTap: _navigateToLogin,
+                        ),
                 ],
               ),
             ),

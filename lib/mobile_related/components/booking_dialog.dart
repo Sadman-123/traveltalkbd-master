@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
+import 'package:traveltalkbd/services/auth_service.dart';
 import '../data/booking_service.dart';
 import '../data/travel_models.dart';
 
@@ -48,6 +49,23 @@ class _BookingDialogState extends State<BookingDialog> {
       if (sorted.isNotEmpty) {
         _selectedVisaEntryKey = sorted.first.key;
       }
+    }
+    _prefillFromAuth();
+  }
+
+  void _prefillFromAuth() {
+    final user = AuthService().currentUser;
+    if (user != null) {
+      _emailController.text = user.email ?? '';
+      _nameController.text = user.displayName ?? '';
+      AuthService().getCurrentUserProfile().then((p) {
+        if (mounted && p != null) {
+          final phone = p['phone'] as String?;
+          if (phone != null && phone.isNotEmpty) {
+            _phoneController.text = phone;
+          }
+        }
+      });
     }
   }
 
@@ -201,10 +219,12 @@ class _BookingDialogState extends State<BookingDialog> {
         _isUploadingPhoto = false;
       });
 
+      final userId = AuthService().currentUserId;
       final bookingData = {
         'itemId': widget.itemId,
         'itemTitle': widget.itemTitle,
         'itemType': widget.itemType,
+        if (userId != null) 'userId': userId,
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
+import 'package:traveltalkbd/services/auth_service.dart';
 import 'data/travel_models.dart';
 import 'components/booking_dialog.dart';
 
@@ -119,7 +121,12 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    if (!AuthService().isSignedIn) {
+                      final result = await Get.toNamed<bool>('/login');
+                      if (!mounted || result != true) return;
+                    }
+                    if (!mounted) return;
                     showDialog(
                       context: context,
                       builder: (context) => BookingDialog(

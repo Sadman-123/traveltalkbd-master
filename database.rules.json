@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "bookings": {
+      ".read": true,
+      ".write": "auth != null",
+      ".indexOn": ["userId"]
+    },
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}
