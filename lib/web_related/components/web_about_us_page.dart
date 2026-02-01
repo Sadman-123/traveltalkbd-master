@@ -144,7 +144,8 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-         flexibleSpace: Container(
+        centerTitle: false,
+        flexibleSpace: Container(
     decoration:  BoxDecoration(
       gradient: Traveltalktheme.primaryGradient
     ),
