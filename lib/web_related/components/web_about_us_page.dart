@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
+import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
+import 'package:traveltalkbd/diy_components/home_footer.dart';
 import 'package:traveltalkbd/web_related/components/web_services_grid.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:traveltalkbd/web_related/components/web_why_choose_us_grid.dart';
 
 class WebAboutUsPage extends StatefulWidget {
@@ -166,10 +169,12 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
+      floatingActionButtonLocation: ExpandableFab.location,
+      floatingActionButton: const ChatFloatingButton(),
       body: SingleChildScrollView(
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 80),
+          padding: const EdgeInsets.only(top: 80),
           color: Colors.white,
           child: Center(
             child: FutureBuilder<TravelContent>(
@@ -199,13 +204,18 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
               final employeesList = about.employees.values.toList()
                 ..sort((a, b) => a.rank.compareTo(b.rank));
 
-              return Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 1400),
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 1400),
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                     // Header
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,65 +606,18 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                       currentIndex: _currentReviewIndex,
                       onPageChanged: _goToReview,
                     ),
-                    const SizedBox(height: 50),
-                    // Contact Information
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue.shade600, Colors.blue.shade800],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Contact Us',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          if (about.contact['phone'] != null)
-                            _ContactItem(
-                              icon: Icons.phone,
-                              label: 'Phone',
-                              value: about.contact['phone'].toString(),
-                            ),
-                          if (about.contact['email'] != null) ...[
-                            const SizedBox(height: 16),
-                            _ContactItem(
-                              icon: Icons.email,
-                              label: 'Email',
-                              value: about.contact['email'].toString(),
-                            ),
-                          ],
-                          if (about.contact['address'] != null) ...[
-                            const SizedBox(height: 16),
-                            _ContactItem(
-                              icon: Icons.location_on,
-                              label: 'Address',
-                              value: about.contact['address'].toString(),
-                            ),
-                          ],
-                          if (about.establishedYear > 0) ...[
-                            const SizedBox(height: 24),
-                            Text(
-                              'Established in ${about.establishedYear}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                    ),
+                  ),
+                  HomeFooter(
+                    onNavigate: (section) {
+                      if (section == 'home' || section == 'destinations' || section == 'packages') {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                ],
               );
             },
             ),
@@ -806,44 +769,3 @@ class _ReviewsCarousel extends StatelessWidget {
   }
 }
 
-class _ContactItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _ContactItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}

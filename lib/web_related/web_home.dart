@@ -12,6 +12,7 @@ import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
 import 'package:traveltalkbd/web_related/components/web_home_packages.dart';
 import 'package:traveltalkbd/web_related/components/web_about_us_page.dart';
 import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
+import 'package:traveltalkbd/diy_components/home_footer.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 
 class WebHome extends StatefulWidget {
@@ -288,6 +289,25 @@ class _WebHomeState extends State<WebHome> {
             Container(
               key: _packagesKey,
               child: const WebHomePackages(),
+            ),
+            // Footer
+            HomeFooter(
+              onNavigate: (section) {
+                switch (section) {
+                  case 'home':
+                    _scrollToSection(_homeKey);
+                    break;
+                  case 'destinations':
+                    _scrollToSection(_destinationsKey);
+                    break;
+                  case 'packages':
+                    _scrollToSection(_packagesKey);
+                    break;
+                  case 'about':
+                    _navigateToAboutUs();
+                    break;
+                }
+              },
             ),
           ],
         ),

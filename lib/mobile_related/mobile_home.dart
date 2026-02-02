@@ -12,6 +12,7 @@ import 'package:traveltalkbd/mobile_related/components/mobile_home_search.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
+import 'package:traveltalkbd/diy_components/home_footer.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 
 class MobileHome extends StatefulWidget {
@@ -302,6 +303,25 @@ class _MobileHomeState extends State<MobileHome> {
               _Section(
                 sectionKey: _aboutKey,
                 child: MobileHomeAbout(embedded: true),
+              ),
+              HomeFooter(
+                isCompact: true,
+                onNavigate: (section) {
+                  switch (section) {
+                    case 'home':
+                      _scrollToSection(_homeKey);
+                      break;
+                    case 'destinations':
+                      _scrollToSection(_destinationsKey);
+                      break;
+                    case 'packages':
+                      _scrollToSection(_packagesKey);
+                      break;
+                    case 'about':
+                      _scrollToSection(_aboutKey);
+                      break;
+                  }
+                },
               ),
             ],
           ),
