@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 /// Centralized Firebase Auth service for login, register, logout.
 class AuthService {
@@ -73,8 +75,50 @@ class AuthService {
     return cred.user;
   }
 
+  /// Sign in with Google (works on web, iOS, and Android)
+  Future<User?> signInWithGoogle() async {
+    if (kIsWeb) {
+      final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+      final user = cred.user;
+      if (user != null) {
+        try {
+          await _saveUserProfile(
+            uid: user.uid,
+            email: user.email ?? '',
+            displayName: user.displayName,
+            photoUrl: user.photoURL,
+          );
+        } catch (_) {}
+      }
+      return user;
+    }
+    final googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) return null;
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    final cred = await _auth.signInWithCredential(credential);
+    final user = cred.user;
+    if (user != null) {
+      try {
+        await _saveUserProfile(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? googleUser.displayName,
+          photoUrl: user.photoURL ?? googleUser.photoUrl,
+        );
+      } catch (_) {}
+    }
+    return user;
+  }
+
   /// Sign out
   Future<void> signOut() async {
+    if (!kIsWeb) {
+      await GoogleSignIn().signOut();
+    }
     await _auth.signOut();
   }
 

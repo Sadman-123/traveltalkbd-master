@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   String? _errorMessage;
 
   @override
@@ -46,6 +48,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await AuthService().signInWithGoogle();
+      if (mounted) {
+        widget.onSuccess?.call();
+        Get.offAllNamed('/');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+          _errorMessage = _authErrorMessage(e.code);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+          _errorMessage = 'Google sign-in failed. Please try again.';
+        });
+      }
+    }
   }
 
   Future<void> _register() async {
@@ -100,6 +130,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return 'Email/password sign-in is not enabled.';
       case 'network-request-failed':
         return 'Network error. Check your internet connection.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email. Try signing in instead.';
+      case 'popup-closed-by-user':
+        return 'Sign-in was cancelled.';
       default:
         return 'Registration failed: $code';
     }
@@ -338,6 +372,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     )
                                   : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: Colors.grey[400])),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('or', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                              ),
+                              Expanded(child: Divider(color: Colors.grey[400])),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 50,
+                            child: OutlinedButton.icon(
+                              onPressed: (_isLoading || _isGoogleLoading) ? null : _signInWithGoogle,
+                              icon: _isGoogleLoading
+                                  ? SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey[700]),
+                                    )
+                                  : const FaIcon(FontAwesomeIcons.google, size: 22, color: Colors.red),
+                              label: Text(
+                                _isGoogleLoading ? 'Signing in...' : 'Continue with Google',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                side: BorderSide(color: Colors.grey[400]!),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),

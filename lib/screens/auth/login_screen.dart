@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
@@ -50,6 +51,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  bool _isGoogleLoading = false;
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      await AuthService().signInWithGoogle();
+      if (mounted) {
+        widget.onSuccess?.call();
+        final returnToBooking = widget.returnToBooking || Get.arguments?['returnToBooking'] == true;
+        if (returnToBooking) {
+          Get.back(result: true);
+        } else {
+          Get.offAllNamed('/');
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+          _errorMessage = _authErrorMessage(e.code);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+          _errorMessage = 'Google sign-in failed. Please try again.';
+        });
+      }
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -99,6 +135,12 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'This account has been disabled.';
       case 'invalid-credential':
         return 'Invalid email or password.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email. Try signing in with email/password.';
+      case 'operation-not-allowed':
+        return 'Google sign-in is not enabled.';
+      case 'popup-closed-by-user':
+        return 'Sign-in was cancelled.';
       default:
         return 'Login failed. Please try again.';
     }
@@ -282,6 +324,41 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     )
                                   : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: Colors.grey[400])),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text('or', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                              ),
+                              Expanded(child: Divider(color: Colors.grey[400])),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 50,
+                            child: OutlinedButton.icon(
+                              onPressed: (_isLoading || _isGoogleLoading) ? null : _signInWithGoogle,
+                              icon: _isGoogleLoading
+                                  ? SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey[700]),
+                                    )
+                                  : const FaIcon(FontAwesomeIcons.google, size: 22, color: Colors.red),
+                              label: Text(
+                                _isGoogleLoading ? 'Signing in...' : 'Continue with Google',
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                side: BorderSide(color: Colors.grey[400]!),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
