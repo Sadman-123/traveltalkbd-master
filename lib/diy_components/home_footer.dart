@@ -278,6 +278,97 @@ class _SocialIcon extends StatelessWidget {
   }
 }
 
+/// Legal & support document keys and placeholder content for footer dialog.
+class _LegalContent {
+  static const Map<String, String> _documents = {
+    'Terms & Conditions': '''
+Welcome to Travel Talk BD. By using our website and services, you agree to these terms.
+
+1. **Services** – We provide travel packages, visa processing, hotel and flight bookings, and related services. All bookings are subject to availability and our booking policy.
+
+2. **User obligations** – You must provide accurate information, be at least 18 years old to book, and comply with applicable laws.
+
+3. **Payments** – Prices are as displayed at booking. Payment terms and refunds are governed by our Refund Policy.
+
+4. **Limitation** – We are not liable for circumstances beyond our control (e.g. weather, visa refusal, force majeure). Liability is limited to the amount paid for the service in question.
+
+5. **Changes** – We may update these terms. Continued use after changes constitutes acceptance.
+
+Contact us for any questions regarding these terms.
+''',
+    'Privacy Policy': '''
+Travel Talk BD respects your privacy. This policy explains how we collect, use, and protect your data.
+
+1. **Information we collect** – Name, email, phone, address, passport/details when you book or contact us. We may collect usage data on our website.
+
+2. **How we use it** – To process bookings, send confirmations, respond to inquiries, improve our services, and comply with legal obligations.
+
+3. **Sharing** – We may share data with partners (e.g. airlines, hotels) only as needed to fulfil your booking. We do not sell your personal data.
+
+4. **Security** – We use appropriate technical and organisational measures to protect your data.
+
+5. **Your rights** – You may request access, correction, or deletion of your data by contacting us.
+
+6. **Cookies** – Our website may use cookies for functionality and analytics. You can manage cookie preferences in your browser.
+
+For questions, contact us using the details in the footer.
+''',
+    'FAQ': '''
+**How do I book a package?**  
+Browse packages on our site, select your preferred option, and complete the booking form. We will confirm availability and payment details.
+
+**What payment methods do you accept?**  
+We accept bank transfer, bKash, and other methods as indicated at checkout. Details are provided after you submit a booking request.
+
+**Can I cancel or modify my booking?**  
+Cancellation and modification rules depend on the service and timing. See our Refund Policy and Booking Policy for details. Contact us for specific requests.
+
+**Do you help with visas?**  
+Yes. We offer visa processing for several countries. Submit an inquiry or select a visa package to get started.
+
+**How can I contact support?**  
+Use the contact details or chat option in the footer. We aim to respond within 24–48 hours on business days.
+''',
+    'Refund Policy': '''
+Travel Talk BD refund policy:
+
+1. **Eligibility** – Refunds depend on the type of service, timing of cancellation, and any non-refundable fees from third parties (airlines, hotels, etc.).
+
+2. **Tour packages** – Cancellation deadlines and refund amounts will be stated at booking. Generally, earlier cancellation results in a higher refund; late cancellations may receive no refund.
+
+3. **Visa fees** – Visa and processing fees are often non-refundable once submitted. We will inform you before payment.
+
+4. **Requesting a refund** – Contact us in writing with your booking reference. We will process eligible refunds within a reasonable period (e.g. 14–30 days) to the original payment method where possible.
+
+5. **Disputes** – If you are not satisfied, contact us first. We will try to resolve the matter fairly.
+
+For your specific booking, please refer to the terms you received at the time of booking or contact us.
+''',
+    'Booking Policy': '''
+Booking policy of Travel Talk BD:
+
+1. **Reservations** – A booking is confirmed only after we confirm availability and (where applicable) receive the required payment or deposit.
+
+2. **Pricing** – Prices are subject to change until confirmed. Quotes are valid for the period we specify.
+
+3. **Deposits & payment** – Some bookings require a deposit to hold. Full payment deadlines will be communicated at booking. Non-payment by the deadline may result in cancellation.
+
+4. **Documents** – You are responsible for valid passport, visa, and other travel documents. We can assist with visa processing where offered.
+
+5. **Changes** – Modification requests are subject to availability and may incur fees. See terms for the specific product.
+
+6. **Cancellation** – Cancellation rules and fees depend on the service and date of cancellation. See our Refund Policy.
+
+Contact us for booking-related questions.
+''',
+  };
+
+  static String getBody(String title) {
+    final raw = _documents[title] ?? 'Content for $title will be available soon.';
+    return raw.replaceAll(RegExp(r'\*\*'), '');
+  }
+}
+
 class _LegalColumn extends StatelessWidget {
   final BuildContext scaffoldContext;
   final bool compact;
@@ -290,8 +381,9 @@ class _LegalColumn extends StatelessWidget {
   });
 
   void _onLegalTap(String label) {
-    ScaffoldMessenger.of(scaffoldContext).showSnackBar(
-      SnackBar(content: Text('$label - Coming soon'), duration: const Duration(seconds: 2)),
+    showDialog<void>(
+      context: scaffoldContext,
+      builder: (context) => _LegalDocumentDialog(title: label, body: _LegalContent.getBody(label)),
     );
   }
 
@@ -313,6 +405,60 @@ class _LegalColumn extends StatelessWidget {
         _FooterLink(label: 'Refund Policy', onTap: () => _onLegalTap('Refund Policy')),
         _FooterLink(label: 'Booking Policy', onTap: () => _onLegalTap('Booking Policy')),
       ],
+    );
+  }
+}
+
+/// Dialog that shows a legal/support document title and scrollable body.
+class _LegalDocumentDialog extends StatelessWidget {
+  final String title;
+  final String body;
+
+  const _LegalDocumentDialog({required this.title, required this.body});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.grey[900],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 560, maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                child: SelectableText(
+                  body.trim(),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15, height: 1.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
