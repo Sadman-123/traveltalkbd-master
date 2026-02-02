@@ -47,9 +47,11 @@ class HomeFooter extends StatelessWidget {
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 800;
         return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isNarrow ? 24 : 48,
-            vertical: 48,
+          padding: EdgeInsets.fromLTRB(
+            isNarrow ? 24 : 48,
+            48,
+            isNarrow ? 24 : 280,
+            48,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -401,16 +403,93 @@ class _ContactColumn extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontSize: compact ? 16 : 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        if (contact['phone'] != null)
-          _ContactRow(icon: Icons.phone_outlined, text: contact['phone'].toString()),
+        // Address first and more prominent
+        if (contact['address'] != null) ...[
+          _AddressRow(
+            text: contact['address'].toString(),
+            compact: compact,
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (contact['phone'] != null) ...[
+          _PhoneRow(text: contact['phone'].toString(), compact: compact),
+          const SizedBox(height: 12),
+        ],
         if (contact['email'] != null) ...[
-          const SizedBox(height: 10),
           _ContactRow(icon: Icons.email_outlined, text: contact['email'].toString()),
         ],
-        if (contact['address'] != null) ...[
-          const SizedBox(height: 10),
-          _ContactRow(icon: Icons.location_on_outlined, text: contact['address'].toString()),
-        ],
+      ],
+    );
+  }
+}
+
+/// Prominent phone row - larger text, more visible.
+class _PhoneRow extends StatelessWidget {
+  final String text;
+  final bool compact;
+
+  const _PhoneRow({required this.text, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.phone_outlined,
+          color: Colors.white.withValues(alpha: 0.95),
+          size: compact ? 20 : 22,
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.95),
+              fontSize: compact ? 15 : 17,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Prominent address row - larger text, allows wrap, more visible.
+class _AddressRow extends StatelessWidget {
+  final String text;
+  final bool compact;
+
+  const _AddressRow({required this.text, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.location_on_outlined,
+          color: Colors.white.withValues(alpha: 0.95),
+          size: compact ? 20 : 22,
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.95),
+              fontSize: compact ? 15 : 17,
+              height: 1.4,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
