@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
@@ -160,6 +162,33 @@ class _DestinationCardState extends State<_DestinationCard> {
   );
 
   bool _hovered = false;
+  Timer? _imageTimer;
+  int _currentImageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startImageRotation();
+  }
+
+  void _startImageRotation() {
+    final photos = widget.destination.photos;
+    if (photos.length > 1) {
+      _imageTimer?.cancel();
+      _imageTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (!mounted) return;
+        setState(() {
+          _currentImageIndex = (_currentImageIndex + 1) % photos.length;
+        });
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _imageTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +219,7 @@ class _DestinationCardState extends State<_DestinationCard> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  _buildBackgroundImage(dest.photo),
+                  _buildBackgroundImages(dest.photos),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -288,7 +317,36 @@ class _DestinationCardState extends State<_DestinationCard> {
     );
   }
 
-  Widget _buildBackgroundImage(String url) {
+  Widget _buildBackgroundImages(List<String> photos) {
+    if (photos.isEmpty) {
+      return Container(
+        color: const Color(0xFF1C2B50),
+        child: const Center(
+          child: Icon(Icons.image_not_supported, color: Colors.white54, size: 48),
+        ),
+      );
+    }
+    if (photos.length == 1) {
+      return _buildSingleImage(photos[0]);
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
+        children: [
+          ...previousChildren,
+          if (currentChild != null) Positioned.fill(child: currentChild!),
+        ],
+      ),
+      child: KeyedSubtree(
+        key: ValueKey<int>(_currentImageIndex),
+        child: _buildSingleImage(photos[_currentImageIndex]),
+      ),
+    );
+  }
+
+  Widget _buildSingleImage(String url) {
     if (url.isEmpty) {
       return Container(
         color: const Color(0xFF1C2B50),
