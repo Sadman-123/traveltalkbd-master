@@ -12,6 +12,7 @@ import 'package:traveltalkbd/mobile_related/components/mobile_home_search.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 
 class MobileHome extends StatefulWidget {
   @override
@@ -280,6 +281,7 @@ class _MobileHomeState extends State<MobileHome> {
             ),
           ),
         ),
+        floatingActionButtonLocation: ExpandableFab.location,
         floatingActionButton: const ChatFloatingButton(),
         body: SingleChildScrollView(
           child: Column(
