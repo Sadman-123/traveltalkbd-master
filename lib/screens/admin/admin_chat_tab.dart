@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:traveltalkbd/diy_components/chat_message_bubble.dart'
+    show ChatMessageBubble, pickAndUploadChatImage;
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/diy_components/user_avatar.dart';
-import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/services/chat_service.dart';
 
 /// Admin tab for real-time chat with users
@@ -57,12 +58,15 @@ class _AdminChatTabState extends State<AdminChatTab> {
 
   String? _selectedUserName;
   String? _selectedUserPhotoUrl;
+  int? _selectedLastActivity;
 
-  void _selectUser(String userId, String displayName, String? photoUrl) {
+  void _selectUser(String userId, String displayName, String? photoUrl,
+      int lastActivity) {
     setState(() {
       _selectedUserId = userId;
       _selectedUserName = displayName;
       _selectedUserPhotoUrl = photoUrl;
+      _selectedLastActivity = lastActivity;
     });
   }
 
@@ -71,6 +75,7 @@ class _AdminChatTabState extends State<AdminChatTab> {
       _selectedUserId = null;
       _selectedUserName = null;
       _selectedUserPhotoUrl = null;
+      _selectedLastActivity = null;
     });
   }
 
@@ -81,6 +86,7 @@ class _AdminChatTabState extends State<AdminChatTab> {
         userId: _selectedUserId!,
         userName: _selectedUserName ?? _selectedUserId!,
         userPhotoUrl: _selectedUserPhotoUrl,
+        lastActivity: _selectedLastActivity ?? 0,
         onBack: _backToList,
       );
     }
@@ -147,14 +153,17 @@ class _AdminChatTabState extends State<AdminChatTab> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
-                      leading: conv.userPhotoUrl != null &&
-                              conv.userPhotoUrl!.isNotEmpty
-                          ? UserAvatar(
-                              photoUrl: conv.userPhotoUrl,
-                              size: 44,
-                              showBorder: false,
-                            )
-                          : CircleAvatar(
+                      leading: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          conv.userPhotoUrl != null &&
+                                  conv.userPhotoUrl!.isNotEmpty
+                              ? UserAvatar(
+                                  photoUrl: conv.userPhotoUrl,
+                                  size: 44,
+                                  showBorder: false,
+                                )
+                              : CircleAvatar(
                               backgroundColor:
                                   Traveltalktheme.primaryGradient.colors.first,
                               child: Text(
@@ -167,6 +176,26 @@ class _AdminChatTabState extends State<AdminChatTab> {
                                 ),
                               ),
                             ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: conv.isUserActive
+                                    ? Colors.green
+                                    : Colors.grey.shade400,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                       title: Text(
                         displayName,
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -204,6 +233,7 @@ class _AdminChatTabState extends State<AdminChatTab> {
                         conv.userId,
                         _chat.getUserDisplayNameFromConversation(conv),
                         conv.userPhotoUrl,
+                        conv.lastActivity,
                       ),
                     ),
                   );
@@ -216,12 +246,14 @@ class _AdminChatConversation extends StatefulWidget {
   final String userId;
   final String userName;
   final String? userPhotoUrl;
+  final int lastActivity;
   final VoidCallback onBack;
 
   const _AdminChatConversation({
     required this.userId,
     required this.userName,
     this.userPhotoUrl,
+    required this.lastActivity,
     required this.onBack,
   });
 
@@ -271,15 +303,19 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
     super.dispose();
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({String? imageUrl}) async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if ((text.isEmpty && imageUrl == null) || _isSending) return;
 
     setState(() => _isSending = true);
-    _textController.clear();
+    if (text.isNotEmpty) _textController.clear();
 
     try {
-      await _chat.sendMessageFromAdmin(widget.userId, text);
+      await _chat.sendMessageFromAdmin(
+        widget.userId,
+        text.isEmpty ? '📷' : text,
+        imageUrl: imageUrl,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -347,12 +383,26 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      'User ID: ${widget.userId.substring(0, 8)}...',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final lastTs = _messages.isNotEmpty
+                            ? _messages.last.timestamp
+                            : widget.lastActivity;
+                        final diff =
+                            DateTime.now().millisecondsSinceEpoch - lastTs;
+                        final status = diff < 3 * 60 * 1000
+                            ? 'Active now'
+                            : timeago.format(
+                                DateTime.fromMillisecondsSinceEpoch(lastTs),
+                              );
+                        return Text(
+                          status,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 12,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -370,34 +420,19 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     )
-                  : FutureBuilder<Map<String, dynamic>?>(
-                      future: AuthService().getCurrentUserProfile(),
-                      builder: (context, snapshot) {
-                        final profile = snapshot.data;
-                        final photoUrl =
-                            profile?['photoUrl'] as String? ??
-                                AuthService().currentUser?.photoURL;
-                        final name = profile?['displayName'] as String? ??
-                            AuthService().currentUser?.displayName ??
-                            AuthService().currentUser?.email ??
-                            '';
-                        final initials = name.trim().isNotEmpty
-                            ? name.trim().substring(0, 1)
-                            : null;
-                        return ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, i) {
-                            final msg = _messages[i];
-                            return _AdminMessageBubble(
-                              message: msg,
-                              showReadTick: msg.isFromCurrentUser,
-                              adminPhotoUrl: photoUrl,
-                              adminInitials: initials,
-                              userPhotoUrl: widget.userPhotoUrl,
-                            );
-                          },
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, i) {
+                        final msg = _messages[i];
+                        return ChatMessageBubble(
+                          message: msg,
+                          showReadTick: msg.isFromCurrentUser,
+                          otherUserPhotoUrl: widget.userPhotoUrl,
+                          isAdminView: true,
+                          onReaction: (emoji) =>
+                              _chat.toggleReaction(widget.userId, msg.id, emoji),
                         );
                       },
                     ),
@@ -417,6 +452,18 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
           child: SafeArea(
             child: Row(
               children: [
+                IconButton(
+                  onPressed: _isSending
+                      ? null
+                      : () async {
+                          final url = await pickAndUploadChatImage();
+                          if (url != null && mounted) _sendMessage(imageUrl: url);
+                        },
+                  icon: Icon(
+                    Icons.image_outlined,
+                    color: _isSending ? Colors.grey : Colors.grey.shade700,
+                  ),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _textController,
@@ -442,7 +489,7 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: _isSending ? null : _sendMessage,
+                    onTap: _isSending ? null : () => _sendMessage(),
                     borderRadius: BorderRadius.circular(24),
                     child: Container(
                       width: 48,
@@ -479,155 +526,5 @@ class _AdminChatConversationState extends State<_AdminChatConversation> {
         ),
       ],
     );
-  }
-}
-
-class _AdminMessageBubble extends StatelessWidget {
-  final ChatMessage message;
-  final bool showReadTick;
-  final String? adminPhotoUrl;
-  final String? adminInitials;
-  final String? userPhotoUrl;
-
-  const _AdminMessageBubble({
-    required this.message,
-    required this.showReadTick,
-    this.adminPhotoUrl,
-    this.adminInitials,
-    this.userPhotoUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isMe = message.isFromCurrentUser;
-    final avatarSize = 36.0;
-    final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
-
-    final avatar = isMe
-        ? UserAvatar(
-            photoUrl: adminPhotoUrl,
-            initials: adminInitials,
-            size: avatarSize,
-            showBorder: false,
-          )
-        : (userPhotoUrl != null && userPhotoUrl!.isNotEmpty)
-            ? UserAvatar(
-                photoUrl: userPhotoUrl,
-                size: avatarSize,
-                showBorder: false,
-              )
-            : CircleAvatar(
-                radius: avatarSize / 2,
-                backgroundColor: Traveltalktheme.primaryGradient.colors.first,
-                child: Text(
-                  message.senderName.isNotEmpty
-                      ? message.senderName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              );
-
-    final bubble = Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-      decoration: BoxDecoration(
-        gradient: isMe ? Traveltalktheme.primaryGradient : null,
-        color: isMe ? null : Colors.grey.shade200,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMe ? 18 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 18),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMe)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                message.senderName,
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          Text(
-            message.text,
-            style: TextStyle(
-              color: isMe ? Colors.white : Colors.black87,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _formatTime(message.timestamp),
-                style: TextStyle(
-                  color: isMe ? Colors.white70 : Colors.grey.shade600,
-                  fontSize: 11,
-                ),
-              ),
-              if (showReadTick && isMe) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  message.isRead ? Icons.done_all : Icons.done,
-                  size: 16,
-                  color: message.isRead
-                      ? Colors.blue.shade200
-                      : Colors.white70,
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMe) ...[
-            avatar,
-            const SizedBox(width: 8),
-          ],
-          Flexible(fit: FlexFit.loose, child: bubble),
-          if (isMe) ...[
-            const SizedBox(width: 8),
-            avatar,
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(int timestamp) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-      return DateFormat.jm().format(dt);
-    }
-    return DateFormat.MMMd().add_jm().format(dt);
   }
 }

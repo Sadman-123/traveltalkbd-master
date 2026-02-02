@@ -6,28 +6,50 @@ import 'package:traveltalkbd/services/auth_service.dart';
 class ChatMessage {
   final String id;
   final String text;
+  final String? imageUrl;
   final String senderId;
   final String senderName;
   final int timestamp;
-  final int? readAt; // when recipient saw it, null = unread
+  final int? readAt;
+  final Map<String, List<String>> reactions; // emoji -> [userId, ...]
 
   ChatMessage({
     required this.id,
     required this.text,
+    this.imageUrl,
     required this.senderId,
     required this.senderName,
     required this.timestamp,
     this.readAt,
+    this.reactions = const {},
   });
 
   factory ChatMessage.fromMap(String id, Map<dynamic, dynamic> map) {
+    final reactionsRaw = map['reactions'];
+    final reactions = <String, List<String>>{};
+    if (reactionsRaw is Map) {
+      for (final e in reactionsRaw.entries) {
+        final val = e.value;
+        List<String> list = [];
+        if (val is List) {
+          list = val.map((x) => x.toString()).toList();
+        } else if (val is Map) {
+          list = val.values.map((x) => x.toString()).toList();
+        }
+        if (list.isNotEmpty) {
+          reactions[e.key.toString()] = list;
+        }
+      }
+    }
     return ChatMessage(
       id: id,
       text: map['text']?.toString() ?? '',
+      imageUrl: map['imageUrl']?.toString(),
       senderId: map['senderId']?.toString() ?? '',
       senderName: map['senderName']?.toString() ?? 'Unknown',
       timestamp: (map['timestamp'] as num?)?.toInt() ?? 0,
       readAt: (map['readAt'] as num?)?.toInt(),
+      reactions: reactions,
     );
   }
 
@@ -42,6 +64,7 @@ class ChatConversation {
   final String? userPhotoUrl;
   final String? lastMessage;
   final int lastActivity;
+  final String? lastSenderId;
   final int unreadCount;
 
   ChatConversation({
@@ -50,8 +73,15 @@ class ChatConversation {
     this.userPhotoUrl,
     this.lastMessage,
     required this.lastActivity,
+    this.lastSenderId,
     this.unreadCount = 0,
   });
+
+  /// User is "active" if they sent last message within last 3 minutes
+  bool get isUserActive {
+    final diff = DateTime.now().millisecondsSinceEpoch - lastActivity;
+    return lastSenderId == userId && diff < 3 * 60 * 1000;
+  }
 }
 
 /// Service for real-time user-admin chat
@@ -72,19 +102,20 @@ class ChatService {
       _conversationRef(userId).child('messages');
 
   /// Send a message from current user (customer) to admin
-  Future<void> sendMessageFromUser(String text) async {
+  Future<void> sendMessageFromUser(String text, {String? imageUrl}) async {
     final uid = AuthService().currentUserId;
     if (uid == null) throw StateError('User must be signed in to chat');
-    await _sendMessage(uid, text, isFromAdmin: false);
+    await _sendMessage(uid, text, isFromAdmin: false, imageUrl: imageUrl);
   }
 
   /// Send a message from admin to a user
-  Future<void> sendMessageFromAdmin(String userId, String text) async {
-    await _sendMessage(userId, text, isFromAdmin: true);
+  Future<void> sendMessageFromAdmin(String userId, String text,
+      {String? imageUrl}) async {
+    await _sendMessage(userId, text, isFromAdmin: true, imageUrl: imageUrl);
   }
 
   Future<void> _sendMessage(String conversationUserId, String text,
-      {required bool isFromAdmin}) async {
+      {required bool isFromAdmin, String? imageUrl}) async {
     final senderId = AuthService().currentUserId ?? 'admin';
     final profile = await AuthService().getCurrentUserProfile();
     final senderName = profile?['displayName'] as String? ??
@@ -92,19 +123,26 @@ class ChatService {
         AuthService().currentUser?.email ??
         'Support';
 
-    final msgRef = _messagesRef(conversationUserId).push();
-    await msgRef.set({
+    final msgData = <String, dynamic>{
       'text': text,
       'senderId': senderId,
       'senderName': senderName,
       'timestamp': ServerValue.timestamp,
       'readAt': null,
-    });
+      'reactions': {},
+    };
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      msgData['imageUrl'] = imageUrl;
+    }
+    final msgRef = _messagesRef(conversationUserId).push();
+    await msgRef.set(msgData);
 
+    final lastMsgDisplay = imageUrl != null ? '📷 Photo' : text;
     final updates = <String, dynamic>{
-      'lastMessage': text,
+      'lastMessage': lastMsgDisplay,
       'lastActivity': ServerValue.timestamp,
       'lastSenderId': senderId,
+      'lastMessageType': imageUrl != null ? 'image' : 'text',
     };
     if (!isFromAdmin && senderId == conversationUserId) {
       updates['userName'] = senderName;
@@ -192,6 +230,7 @@ class ChatService {
         final userId = entry.key.toString();
         final lastMsg = convData['lastMessage']?.toString();
         final lastActivity = (convData['lastActivity'] as num?)?.toInt() ?? 0;
+        final lastSenderId = convData['lastSenderId']?.toString();
 
         final messages = convData['messages'] as Map<dynamic, dynamic>?;
         var unread = 0;
@@ -211,6 +250,7 @@ class ChatService {
           userPhotoUrl: convData['userPhotoUrl']?.toString(),
           lastMessage: lastMsg,
           lastActivity: lastActivity,
+          lastSenderId: lastSenderId,
           unreadCount: unread,
         ));
       }
@@ -224,5 +264,34 @@ class ChatService {
     return conv.userName?.isNotEmpty == true
         ? conv.userName!
         : conv.userId;
+  }
+
+  /// Add or toggle reaction on a message
+  Future<void> toggleReaction(
+      String conversationUserId, String messageId, String emoji) async {
+    final uid = AuthService().currentUserId;
+    if (uid == null) return;
+
+    final msgRef =
+        _messagesRef(conversationUserId).child(messageId).child('reactions');
+    final snapshot = await msgRef.child(emoji).get();
+
+    if (snapshot.exists) {
+      final list = List<String>.from(
+          (snapshot.value as List?)?.map((x) => x.toString()) ?? []);
+      if (list.contains(uid)) {
+        list.remove(uid);
+        if (list.isEmpty) {
+          await msgRef.child(emoji).remove();
+        } else {
+          await msgRef.child(emoji).set(list);
+        }
+      } else {
+        list.add(uid);
+        await msgRef.child(emoji).set(list);
+      }
+    } else {
+      await msgRef.child(emoji).set([uid]);
+    }
   }
 }

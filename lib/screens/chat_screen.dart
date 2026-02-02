@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:traveltalkbd/diy_components/chat_message_bubble.dart'
+    show ChatMessageBubble, pickAndUploadChatImage;
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
-import 'package:traveltalkbd/diy_components/user_avatar.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/services/chat_service.dart';
 
@@ -63,15 +63,18 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  Future<void> _sendMessage() async {
+  Future<void> _sendMessage({String? imageUrl}) async {
     final text = _textController.text.trim();
-    if (text.isEmpty || _isSending) return;
+    if ((text.isEmpty && imageUrl == null) || _isSending) return;
 
     setState(() => _isSending = true);
-    _textController.clear();
+    if (text.isNotEmpty) _textController.clear();
 
     try {
-      await _chat.sendMessageFromUser(text);
+      await _chat.sendMessageFromUser(
+        text.isEmpty ? '📷' : text,
+        imageUrl: imageUrl,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,12 +167,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                   padding: const EdgeInsets.all(16),
                                   itemCount: _messages.length,
                                   itemBuilder: (context, i) {
-                                    return _MessageBubble(
-                                      message: _messages[i],
-                                      showReadTick:
-                                          _messages[i].isFromCurrentUser,
+                                    final msg = _messages[i];
+                                    return ChatMessageBubble(
+                                      message: msg,
+                                      showReadTick: msg.isFromCurrentUser,
                                       currentUserPhotoUrl: photoUrl,
                                       currentUserInitials: initials,
+                                      isAdminView: false,
+                                      onReaction: (emoji) => _chat
+                                          .toggleReaction(_userId, msg.id, emoji),
                                     );
                                   },
                                 );
@@ -198,6 +204,18 @@ class _ChatScreenState extends State<ChatScreen> {
       child: SafeArea(
         child: Row(
           children: [
+            IconButton(
+              onPressed: _isSending
+                  ? null
+                  : () async {
+                      final url = await pickAndUploadChatImage();
+                      if (url != null && mounted) _sendMessage(imageUrl: url);
+                    },
+              icon: Icon(
+                Icons.image_outlined,
+                color: _isSending ? Colors.grey : Colors.grey.shade700,
+              ),
+            ),
             Expanded(
               child: TextField(
                 controller: _textController,
@@ -223,7 +241,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: _isSending ? null : _sendMessage,
+                onTap: _isSending ? null : () => _sendMessage(),
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   width: 48,
@@ -258,135 +276,5 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-  }
-}
-
-class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
-  final bool showReadTick;
-  final String? currentUserPhotoUrl;
-  final String? currentUserInitials;
-
-  const _MessageBubble({
-    required this.message,
-    required this.showReadTick,
-    this.currentUserPhotoUrl,
-    this.currentUserInitials,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isMe = message.isFromCurrentUser;
-    final avatarSize = 36.0;
-    final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
-
-    final avatar = isMe
-        ? UserAvatar(
-            photoUrl: currentUserPhotoUrl,
-            initials: currentUserInitials,
-            size: avatarSize,
-            showBorder: false,
-          )
-        : CircleAvatar(
-            radius: avatarSize / 2,
-            backgroundColor: Traveltalktheme.primaryGradient.colors.first,
-            child: Text(
-              message.senderName.isNotEmpty
-                  ? message.senderName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          );
-
-    final bubble = Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-      decoration: BoxDecoration(
-        gradient: isMe ? Traveltalktheme.primaryGradient : null,
-        color: isMe ? null : Colors.grey.shade200,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMe ? 18 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 18),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            message.text,
-            style: TextStyle(
-              color: isMe ? Colors.white : Colors.black87,
-              fontSize: 15,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _formatTime(message.timestamp),
-                style: TextStyle(
-                  color: isMe ? Colors.white70 : Colors.grey.shade600,
-                  fontSize: 11,
-                ),
-              ),
-              if (showReadTick && isMe) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  message.isRead ? Icons.done_all : Icons.done,
-                  size: 16,
-                  color: message.isRead
-                      ? Colors.blue.shade200
-                      : Colors.white70,
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMe) ...[
-            avatar,
-            const SizedBox(width: 8),
-          ],
-          Flexible(fit: FlexFit.loose, child: bubble),
-          if (isMe) ...[
-            const SizedBox(width: 8),
-            avatar,
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(int timestamp) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-      return DateFormat.jm().format(dt);
-    }
-    return DateFormat.MMMd().add_jm().format(dt);
   }
 }

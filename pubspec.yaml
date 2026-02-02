@@ -48,6 +48,8 @@ dependencies:
   flutter_svg: ^2.2.3
   firebase_auth: ^6.1.4
   google_sign_in: ^6.2.2
+  timeago: ^3.7.1
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
