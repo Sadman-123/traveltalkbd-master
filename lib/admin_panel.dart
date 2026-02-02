@@ -13,6 +13,7 @@ import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 import 'package:traveltalkbd/services/cloudinary_service.dart';
 import 'package:traveltalkbd/services/home_settings_service.dart';
+import 'package:traveltalkbd/screens/admin/admin_chat_tab.dart';
 import 'package:http/http.dart' as http;
 
 // Conditional import for download functionality
@@ -45,7 +46,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
     // Preload the whole database snapshot once so the splash stays
     // until Firebase data is ready.
     _preloadFuture = FirebaseDatabase.instance.ref().get().then((_) {});
@@ -112,6 +113,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
             Tab(icon: Icon(Icons.book_online), text: 'Bookings'),
             Tab(icon: Icon(Icons.campaign), text: 'Banners/Promotions'),
             Tab(icon: Icon(Icons.info), text: 'About Us'),
+            Tab(icon: Icon(Icons.chat), text: 'Chat'),
           ],
         ),
       ),
@@ -125,6 +127,7 @@ class _AdminPanelState extends State<AdminPanel> with SingleTickerProviderStateM
           BookingsTab(dbRef: _dbRef),
           BannersTab(dbRef: _dbRef),
           AboutUsTab(dbRef: _dbRef),
+          const AdminChatTab(),
         ],
       ),
       ),

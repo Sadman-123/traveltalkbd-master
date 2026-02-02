@@ -11,6 +11,7 @@ import 'package:traveltalkbd/mobile_related/components/mobile_home_packages.dart
 import 'package:traveltalkbd/mobile_related/components/mobile_home_search.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
+import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
 
 class MobileHome extends StatefulWidget {
   @override
@@ -279,6 +280,7 @@ class _MobileHomeState extends State<MobileHome> {
             ),
           ),
         ),
+        floatingActionButton: const ChatFloatingButton(),
         body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -302,7 +304,6 @@ class _MobileHomeState extends State<MobileHome> {
             ],
           ),
         ),
-        //floatingActionButton: FloatingActionButton(onPressed: (){}),
       ),
     );
   }

@@ -11,6 +11,7 @@ import 'package:traveltalkbd/web_related/components/web_home_search.dart';
 import 'package:traveltalkbd/web_related/components/web_home_destinition.dart';
 import 'package:traveltalkbd/web_related/components/web_home_packages.dart';
 import 'package:traveltalkbd/web_related/components/web_about_us_page.dart';
+import 'package:traveltalkbd/diy_components/chat_floating_button.dart';
 
 class WebHome extends StatefulWidget {
   @override
@@ -266,6 +267,7 @@ class _WebHomeState extends State<WebHome> {
           const SizedBox(width: 16),
         ],
       ),
+      floatingActionButton: const ChatFloatingButton(),
       body: SingleChildScrollView(
         controller: _scrollController,
         child: Column(
