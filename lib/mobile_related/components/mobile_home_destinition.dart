@@ -6,87 +6,6 @@ import 'package:traveltalkbd/mobile_related/data/travel_data_service.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/mobile_related/travel_detail_screen.dart';
 
-/// Slides previous image out to the left, new image in from the right.
-class _SlideImageCarousel extends StatefulWidget {
-  final List<String> photos;
-  final int currentIndex;
-  final Widget Function(String url) buildImage;
-
-  const _SlideImageCarousel({
-    required this.photos,
-    required this.currentIndex,
-    required this.buildImage,
-  });
-
-  @override
-  State<_SlideImageCarousel> createState() => _SlideImageCarouselState();
-}
-
-class _SlideImageCarouselState extends State<_SlideImageCarousel>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _outAnimation;
-  late Animation<Offset> _inAnimation;
-  late int _previousIndex;
-  late int _displayIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousIndex = widget.currentIndex;
-    _displayIndex = widget.currentIndex;
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _outAnimation = Tween<Offset>(begin: Offset.zero, end: const Offset(-1, 0))
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _inAnimation = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-    _controller.value = 1.0; // Start with current image at center
-  }
-
-  @override
-  void didUpdateWidget(_SlideImageCarousel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      _previousIndex = oldWidget.currentIndex;
-      _displayIndex = widget.currentIndex;
-      _controller.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      clipBehavior: Clip.none,
-      children: [
-        // New image slides in from right (bottom layer - gets revealed)
-        Positioned.fill(
-          child: SlideTransition(
-            position: _inAnimation,
-            child: widget.buildImage(widget.photos[_displayIndex]),
-          ),
-        ),
-        // Previous image slides out to left (top layer - we see it moving)
-        Positioned.fill(
-          child: SlideTransition(
-            position: _outAnimation,
-            child: widget.buildImage(widget.photos[_previousIndex]),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class MobileHomeDestinition extends StatelessWidget {
   const MobileHomeDestinition({super.key});
 
@@ -358,20 +277,34 @@ class _DestinationCardState extends State<_DestinationCard> {
 
   Widget _buildBackgroundImages(List<String> photos) {
     if (photos.isEmpty) {
-      return Container(
-        color: const Color(0xFF1C2B50),
-        child: const Center(
-          child: Icon(Icons.image_not_supported, color: Colors.white54, size: 48),
+      return const SizedBox.expand(
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: Color(0xFF1C2B50)),
+          child: Center(
+            child: Icon(Icons.image_not_supported, color: Colors.white54, size: 48),
+          ),
         ),
       );
     }
     if (photos.length == 1) {
-      return _buildSingleImage(photos[0]);
+      return SizedBox.expand(child: _buildSingleImage(photos[0]));
     }
-    return _SlideImageCarousel(
-      photos: photos,
-      currentIndex: _currentImageIndex,
-      buildImage: _buildSingleImage,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        fit: StackFit.expand,
+        alignment: Alignment.center,
+        children: [
+          ...previousChildren,
+          if (currentChild != null) Positioned.fill(child: currentChild),
+        ],
+      ),
+      child: KeyedSubtree(
+        key: ValueKey<int>(_currentImageIndex),
+        child: SizedBox.expand(
+          child: _buildSingleImage(photos[_currentImageIndex]),
+        ),
+      ),
     );
   }
 
