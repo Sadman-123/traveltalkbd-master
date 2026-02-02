@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:traveltalkbd/screens/booking_detail_screen.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
@@ -23,7 +24,39 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBookings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (AuthService().isEmailPasswordUser && !AuthService().isEmailVerified) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Verify your email'),
+            content: const Text(
+              'Please verify your email address to view your bookings. Check your inbox for the verification link, or go to Profile to resend it.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.back();
+                },
+                child: const Text('Go back'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.offNamed('/profile');
+                },
+                child: const Text('Go to Profile'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      _loadBookings();
+    });
   }
 
   Future<void> _loadBookings() async {

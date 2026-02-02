@@ -63,6 +63,31 @@ class _WebHomeState extends State<WebHome> {
       _navigateToLogin();
       return;
     }
+    if (_auth.isEmailPasswordUser && !_auth.isEmailVerified) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Verify your email'),
+          content: const Text(
+            'Please verify your email address to view your bookings. Check your inbox for the verification link, or go to Profile to resend it.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Get.toNamed('/profile')?.then((_) => setState(() {}));
+              },
+              child: const Text('Go to Profile'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     Get.toNamed('/bookings')?.then((_) => setState(() {}));
   }
 

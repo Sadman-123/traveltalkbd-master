@@ -92,7 +92,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (mounted) {
         widget.onSuccess?.call();
-        Get.offAllNamed('/');
+        final email = _emailController.text.trim();
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.mark_email_read_outlined, color: Colors.green.shade700, size: 28),
+                const SizedBox(width: 12),
+                const Text('Check your email'),
+              ],
+            ),
+            content: Text(
+              'We\'ve sent a verification link to $email. Please check your inbox and click the link to verify your email address.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        if (mounted) Get.offAllNamed('/');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {

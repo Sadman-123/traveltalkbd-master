@@ -21,6 +21,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
   bool _isLoading = false;
   bool _isSaving = false;
   bool _isUploadingPhoto = false;
+  bool _isSendingVerification = false;
   String? _error;
   String? _photoUrl;
 
@@ -36,8 +37,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
       _error = null;
     });
     try {
-      final profile = await AuthService().getCurrentUserProfile();
-      final user = AuthService().currentUser;
+      final auth = AuthService();
+      await auth.reloadUser();
+      final profile = await auth.getCurrentUserProfile();
+      final user = auth.currentUser;
       if (mounted) {
         _nameController.text = profile?['displayName'] as String? ?? user?.displayName ?? '';
         _phoneController.text = profile?['phone'] as String? ?? '';
@@ -50,6 +53,35 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           _isLoading = false;
           _error = e.toString();
         });
+      }
+    }
+  }
+
+  Future<void> _resendVerificationEmail() async {
+    setState(() {
+      _isSendingVerification = true;
+      _error = null;
+    });
+    try {
+      await AuthService().sendEmailVerification();
+      if (mounted) {
+        setState(() => _isSendingVerification = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification email sent! Check your inbox.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSendingVerification = false);
+        final msg = e.toString().contains('too-many-requests')
+            ? 'Please wait a few minutes before requesting another email.'
+            : 'Failed to send verification email. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -285,6 +317,75 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
                           'Tap to change photo',
                           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
+                        if (AuthService().isEmailPasswordUser && !AuthService().isEmailVerified) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.amber.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 24),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Verify your email',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.amber.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'We\'ve sent a verification link to your email. Please check your inbox and click the link to verify your account.',
+                                  style: TextStyle(fontSize: 14, color: Colors.amber.shade900),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: _isSendingVerification ? null : _resendVerificationEmail,
+                                        icon: _isSendingVerification
+                                            ? SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.amber.shade800,
+                                                ),
+                                              )
+                                            : Icon(Icons.refresh, size: 18, color: Colors.amber.shade800),
+                                        label: Text(
+                                          _isSendingVerification ? 'Sending...' : 'Resend',
+                                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.amber.shade900),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(color: Colors.amber.shade700),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    TextButton(
+                                      onPressed: _isLoading ? null : _loadProfile,
+                                      child: Text('Refresh status', style: TextStyle(color: Colors.amber.shade800)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         Text(
                           'Account Information',

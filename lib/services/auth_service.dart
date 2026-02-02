@@ -29,7 +29,31 @@ class AuthService {
   /// Check if user is signed in
   bool get isSignedIn => _auth.currentUser != null;
 
+  /// Whether the current user's email is verified (always true for Google/other providers)
+  bool get isEmailVerified => _auth.currentUser?.emailVerified ?? true;
+
+  /// Whether the current user signed up with email/password (vs Google, etc.)
+  bool get isEmailPasswordUser {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    return user.providerData.any((p) => p.providerId == 'password');
+  }
+
+  /// Reload current user from server (e.g. to refresh emailVerified after user clicks link)
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+  }
+
+  /// Send verification email to current user. Only applies to email/password users.
+  /// Throws if user is null or not an email/password user.
+  Future<void> sendEmailVerification() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('No user signed in');
+    await user.sendEmailVerification();
+  }
+
   /// Register with email and password. Optionally store displayName and phone.
+  /// Sends a verification email after registration.
   Future<User?> registerWithEmailPassword({
     required String email,
     required String password,
@@ -58,6 +82,11 @@ class AuthService {
         );
       } catch (_) {
         // Ignore profile save failure - user is registered in Auth, profile can be updated later
+      }
+      try {
+        await user.sendEmailVerification();
+      } catch (_) {
+        // User is registered; verification email failure is non-fatal
       }
     }
     return user;

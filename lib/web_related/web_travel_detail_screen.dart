@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/mobile_related/data/travel_models.dart';
 import 'package:traveltalkbd/screens/auth/login_screen.dart';
@@ -112,6 +113,30 @@ class _WebTravelDetailScreenState extends State<WebTravelDetailScreen> {
                               ),
                             );
                             if (!mounted || result != true) return;
+                          }
+                          if (!mounted) return;
+                          if (AuthService().isEmailPasswordUser && !AuthService().isEmailVerified) {
+                            final go = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Verify your email'),
+                                content: const Text(
+                                  'Please verify your email address before making a booking. Check your inbox for the verification link, or go to Profile to resend it.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Go to Profile'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (mounted && go == true) Get.toNamed('/profile');
+                            return;
                           }
                           if (!mounted) return;
                           showDialog(

@@ -153,6 +153,16 @@ class _WebBookingDialogState extends State<WebBookingDialog> {
       return;
     }
 
+    if (AuthService().isEmailPasswordUser && !AuthService().isEmailVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please verify your email before making a booking. Go to Profile to resend the verification link.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
