@@ -4486,6 +4486,7 @@ class _AboutUsTabState extends State<AboutUsTab> {
     final facebookController = TextEditingController(text: _aboutUs?['socialLinks']?['facebook'] ?? '');
     final instagramController = TextEditingController(text: _aboutUs?['socialLinks']?['instagram'] ?? '');
     final whatsappController = TextEditingController(text: _aboutUs?['socialLinks']?['whatsapp'] ?? '');
+    final youtubeController = TextEditingController(text: _aboutUs?['socialLinks']?['youtube'] ?? '');
     
     // Lists
     final whyChooseUsController = TextEditingController(text: (_aboutUs?['whyChooseUs'] as List?)?.join(', ') ?? '');
@@ -4641,6 +4642,11 @@ class _AboutUsTabState extends State<AboutUsTab> {
                             controller: whatsappController,
                             decoration: const InputDecoration(labelText: 'WhatsApp URL'),
                           ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: youtubeController,
+                            decoration: const InputDecoration(labelText: 'YouTube URL'),
+                          ),
                           const SizedBox(height: 24),
                           const Divider(),
                           const Text('Why Choose Us (comma-separated)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -4701,6 +4707,7 @@ class _AboutUsTabState extends State<AboutUsTab> {
                                       'facebook': facebookController.text,
                                       'instagram': instagramController.text,
                                       'whatsapp': whatsappController.text,
+                                      'youtube': youtubeController.text,
                                     },
                                     'whyChooseUs': whyChooseUs,
                                     'services': services,

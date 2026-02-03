@@ -238,6 +238,11 @@ class _AboutColumn extends StatelessWidget {
                 icon: FontAwesomeIcons.whatsapp,
                 onTap: () => onSocialTap(socialLinks['whatsapp']?.toString()),
               ),
+            if (socialLinks['youtube']?.toString().isNotEmpty == true)
+              _SocialIcon(
+                icon: FontAwesomeIcons.youtube,
+                onTap: () => onSocialTap(socialLinks['youtube']?.toString()),
+              ),
             if (socialLinks['twitter']?.toString().isNotEmpty == true)
               _SocialIcon(
                 icon: FontAwesomeIcons.xTwitter,
