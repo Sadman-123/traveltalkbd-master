@@ -451,6 +451,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                                         style: const TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
+                                          fontFamily: 'traveltalk2',
                                         ),
                                       ),
                                       const SizedBox(height: 6),
@@ -460,6 +461,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                                           fontSize: 18,
                                           color: Colors.blue.shade700,
                                           fontWeight: FontWeight.w500,
+                                          fontFamily: 'traveltalk2',
                                         ),
                                       ),
                                       if (employee.experience.isNotEmpty) ...[
@@ -473,6 +475,7 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                                               style: TextStyle(
                                                 fontSize: 15,
                                                 color: Colors.grey[700],
+                                                fontFamily: 'traveltalk2',
                                               ),
                                             ),
                                           ],
@@ -500,8 +503,9 @@ class _WebAboutUsPageState extends State<WebAboutUsPage> {
                                                 employee.quote,
                                                 style: TextStyle(
                                                   fontSize: 15,
-                                                  fontStyle: FontStyle.italic,
+                                                  fontWeight: FontWeight.w500,
                                                   color: Colors.grey[800],
+                                                  fontFamily: 'traveltalk2',
                                                   height: 1.5,
                                                 ),
                                               ),

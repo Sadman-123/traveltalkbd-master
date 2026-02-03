@@ -276,6 +276,7 @@ class MobileHomeAbout extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    fontFamily: 'traveltalk2',
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -285,6 +286,7 @@ class MobileHomeAbout extends StatelessWidget {
                                     fontSize: 15,
                                     color: Colors.blue.shade700,
                                     fontWeight: FontWeight.w500,
+                                    fontFamily: 'traveltalk2',
                                   ),
                                 ),
                                 if (employee.experience.isNotEmpty) ...[
@@ -326,8 +328,8 @@ class MobileHomeAbout extends StatelessWidget {
                                         child: Text(
                                           employee.quote,
                                           style: TextStyle(
+                                            fontFamily: 'traveltalk2',
                                             fontSize: 13,
-                                            fontStyle: FontStyle.italic,
                                             color: Colors.grey[800],
                                             height: 1.4,
                                           ),
