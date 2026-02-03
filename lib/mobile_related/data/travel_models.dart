@@ -91,6 +91,33 @@ class VisaEntryTypeOption {
       );
 }
 
+/// Structured document item for visa requirements
+class VisaDocumentItem {
+  final String title;
+  final List<String> subtitles;
+
+  const VisaDocumentItem({
+    required this.title,
+    this.subtitles = const [],
+  });
+
+  factory VisaDocumentItem.fromMap(Map<String, dynamic> map) {
+    return VisaDocumentItem(
+      title: (map['title'] ?? '') as String,
+      subtitles: (map['subtitles'] is List)
+          ? List<String>.from(
+              (map['subtitles'] as List).where((e) => e is String),
+            )
+          : const [],
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'title': title,
+        'subtitles': subtitles,
+      };
+}
+
 class VisaPackage {
   final String id;
   final String title;
@@ -103,6 +130,10 @@ class VisaPackage {
   final String photo; // First photo (for backward compatibility)
   final List<String> photos; // All photos
   final List<String> requiredDocuments;
+  /// New structured general documents section (title + subtitles)
+  final List<VisaDocumentItem> generalDocuments;
+  /// New per-category documents, keyed by category id (businessPerson, student, jobHolder, other)
+  final Map<String, List<VisaDocumentItem>> categoryDocuments;
   final bool available;
   final bool discountEnabled;
   final num discountAmount;
@@ -122,12 +153,16 @@ class VisaPackage {
     required this.photo,
     required this.photos,
     required this.requiredDocuments,
+    List<VisaDocumentItem>? generalDocuments,
+    Map<String, List<VisaDocumentItem>>? categoryDocuments,
     required this.available,
     this.discountEnabled = false,
     this.discountAmount = 0,
     this.discountPercent = 0,
     Map<String, VisaEntryTypeOption>? entryTypes,
-  }) : entryTypes = entryTypes ?? {};
+  })  : generalDocuments = generalDocuments ?? const [],
+        categoryDocuments = categoryDocuments ?? const {},
+        entryTypes = entryTypes ?? {};
 
   num get discountedPrice {
     if (!discountEnabled) return price;
@@ -218,6 +253,34 @@ class VisaPackage {
       }
     }
 
+    // Structured documents: generalDocuments (list of maps)
+    List<VisaDocumentItem> generalDocs = const [];
+    final generalRaw = map['generalDocuments'];
+    if (generalRaw is List) {
+      generalDocs = generalRaw
+          .whereType<Map>()
+          .map((e) => VisaDocumentItem.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    // Structured documents by category
+    final Map<String, List<VisaDocumentItem>> categoryDocs = {};
+    final categoryRaw = map['categoryDocuments'];
+    if (categoryRaw is Map) {
+      final cats = Map<String, dynamic>.from(categoryRaw);
+      for (final entry in cats.entries) {
+        if (entry.value is List) {
+          final items = (entry.value as List)
+              .whereType<Map>()
+              .map((e) => VisaDocumentItem.fromMap(Map<String, dynamic>.from(e)))
+              .toList();
+          if (items.isNotEmpty) {
+            categoryDocs[entry.key] = items;
+          }
+        }
+      }
+    }
+
     return VisaPackage(
       id: id,
       title: map['title'] ?? '',
@@ -230,6 +293,8 @@ class VisaPackage {
       photo: firstPhoto,
       photos: photosList,
       requiredDocuments: List<String>.from(map['requiredDocuments'] ?? const []),
+      generalDocuments: generalDocs,
+      categoryDocuments: categoryDocs,
       available: map['available'] ?? false,
       discountEnabled: map['discountEnabled'] ?? false,
       discountAmount: map['discountAmount'] ?? 0,

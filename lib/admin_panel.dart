@@ -31,6 +31,45 @@ class _PickedImage {
   bool get isWeb => kIsWeb;
 }
 
+/// Helper model used inside the visa package dialog for editing documents
+class _AdminVisaDocument {
+  final TextEditingController titleController;
+  final TextEditingController subtitlesController;
+
+  _AdminVisaDocument({
+    String title = '',
+    List<String>? subtitles,
+  })  : titleController = TextEditingController(text: title),
+        subtitlesController = TextEditingController(
+          text: (subtitles ?? const []).join(', '),
+        );
+
+  factory _AdminVisaDocument.fromMap(Map<String, dynamic> map) {
+    final rawSubs = map['subtitles'];
+    final subtitles = rawSubs is List
+        ? List<String>.from(rawSubs.where((e) => e is String))
+        : const <String>[];
+    return _AdminVisaDocument(
+      title: (map['title'] ?? '') as String,
+      subtitles: subtitles,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    final rawSubtitles = subtitlesController.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    return {
+      'title': titleController.text.trim(),
+      'subtitles': rawSubtitles,
+    };
+  }
+
+  bool get isEmpty => titleController.text.trim().isEmpty;
+}
+
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
 
@@ -2098,12 +2137,66 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
     final visaTypeController = TextEditingController(text: data?['visaType'] ?? '');
     final validityController = TextEditingController(text: data?['validity'] ?? '');
     final processingTimeController = TextEditingController(text: data?['processingTime'] ?? '');
-    final documentsController = TextEditingController(
-      text: (data?['requiredDocuments'] as List?)?.join(', ') ?? '',
-    );
     final availableController = ValueNotifier<bool>(data?['available'] ?? true);
     final discountEnabledController = ValueNotifier<bool>(data?['discountEnabled'] ?? false);
     final discountPercentController = TextEditingController(text: data?['discountPercent']?.toString() ?? data?['discountAmount']?.toString() ?? '0');
+
+    // Structured documents: general + per-category
+    final List<_AdminVisaDocument> generalDocuments = [];
+    final Map<String, List<_AdminVisaDocument>> categoryDocuments = {
+      'businessPerson': <_AdminVisaDocument>[],
+      'student': <_AdminVisaDocument>[],
+      'jobHolder': <_AdminVisaDocument>[],
+      'other': <_AdminVisaDocument>[],
+    };
+
+    // Load structured general documents if present
+    final generalRaw = data?['generalDocuments'];
+    if (generalRaw is List) {
+      for (final item in generalRaw) {
+        if (item is Map) {
+          generalDocuments.add(
+            _AdminVisaDocument.fromMap(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+
+    // Load structured category documents if present
+    final categoryRaw = data?['categoryDocuments'];
+    if (categoryRaw is Map) {
+      final cats = Map<String, dynamic>.from(categoryRaw);
+      for (final entry in cats.entries) {
+        final key = entry.key;
+        if (entry.value is List && categoryDocuments.containsKey(key)) {
+          final list = <_AdminVisaDocument>[];
+          for (final item in (entry.value as List)) {
+            if (item is Map) {
+              list.add(
+                _AdminVisaDocument.fromMap(Map<String, dynamic>.from(item)),
+              );
+            }
+          }
+          if (list.isNotEmpty) {
+            categoryDocuments[key] = list;
+          }
+        }
+      }
+    }
+
+    // Backwards compatibility: if no structured general docs yet, seed from legacy requiredDocuments
+    if (generalDocuments.isEmpty) {
+      final legacyDocs = data?['requiredDocuments'];
+      if (legacyDocs is List) {
+        for (final item in legacyDocs) {
+          if (item is String && item.trim().isNotEmpty) {
+            generalDocuments.add(
+              _AdminVisaDocument(title: item.trim()),
+            );
+          }
+        }
+      }
+    }
 
     // Entry types: single, double, multiple - safe extraction (Firebase returns Map<dynamic, dynamic>)
     final entryTypesRaw = data?['entryTypes'];
@@ -2427,15 +2520,196 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                     controller: processingTimeController,
                     decoration: const InputDecoration(labelText: 'Processing Time'),
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: documentsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Required Documents (comma separated)',
-                      hintText: 'Passport, Photo, NID Copy',
+                  const SizedBox(height: 16),
+                  // General Documents section
+                  const Text(
+                    'General Documents',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
+                  if (generalDocuments.isEmpty)
+                    const Text(
+                      'No general documents added yet',
+                      style: TextStyle(color: Colors.grey),
+                    )
+                  else
+                    ...generalDocuments.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final doc = entry.value;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Document ${index + 1}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        generalDocuments.removeAt(index);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              TextFormField(
+                                controller: doc.titleController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Title',
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: doc.subtitlesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Subtitles (comma separated)',
+                                  hintText: 'e.g. At least 6 months validity, Old passport copies',
+                                ),
+                                maxLines: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          generalDocuments.add(_AdminVisaDocument());
+                        });
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add general document'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Documents by visa category
+                  const Text(
+                    'Documents by visa category',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Builder(
+                    builder: (context) {
+                      const categoryLabels = <String, String>{
+                        'businessPerson': 'Business person',
+                        'student': 'Student',
+                        'jobHolder': 'Job holder',
+                        'other': 'Other documents',
+                      };
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: categoryLabels.entries.map((cat) {
+                          final key = cat.key;
+                          final label = cat.value;
+                          final docs = categoryDocuments[key]!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              Text(
+                                label,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (docs.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4.0, bottom: 4.0),
+                                  child: Text(
+                                    'No documents added yet',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              else
+                                ...docs.asMap().entries.map((entry) {
+                                  final idx = entry.key;
+                                  final doc = entry.value;
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Requirement ${idx + 1}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                                onPressed: () {
+                                                  setDialogState(() {
+                                                    docs.removeAt(idx);
+                                                  });
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          TextFormField(
+                                            controller: doc.titleController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Title',
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TextFormField(
+                                            controller: doc.subtitlesController,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Subtitles (comma separated)',
+                                              hintText: 'e.g. Bank statement, Salary certificate',
+                                            ),
+                                            maxLines: 2,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      docs.add(_AdminVisaDocument());
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add),
+                                  label: Text('Add $label document'),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   ValueListenableBuilder<bool>(
                     valueListenable: availableController,
                     builder: (context, available, _) => SwitchListTile(
@@ -2514,12 +2788,57 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                   
                                   // Combine existing URLs with newly uploaded URLs
                                   final allImageUrls = [...existingUrls, ...uploadedUrls];
-                                  
-                                  final documents = documentsController.text
-                                      .split(',')
-                                      .map((e) => e.trim())
-                                      .where((e) => e.isNotEmpty)
-                                      .toList();
+
+                                  // Build structured documents payloads
+                                  final List<Map<String, dynamic>> generalDocsPayload = [];
+                                  for (final doc in generalDocuments) {
+                                    final map = doc.toMap();
+                                    final title = (map['title'] as String).trim();
+                                    if (title.isNotEmpty) {
+                                      generalDocsPayload.add(map);
+                                    }
+                                  }
+
+                                  final Map<String, List<Map<String, dynamic>>> categoryDocsPayload = {};
+                                  for (final entry in categoryDocuments.entries) {
+                                    final docs = <Map<String, dynamic>>[];
+                                    for (final doc in entry.value) {
+                                      final map = doc.toMap();
+                                      final title = (map['title'] as String).trim();
+                                      if (title.isNotEmpty) {
+                                        docs.add(map);
+                                      }
+                                    }
+                                    if (docs.isNotEmpty) {
+                                      categoryDocsPayload[entry.key] = docs;
+                                    }
+                                  }
+
+                                  // Legacy flat requiredDocuments for backward compatibility
+                                  final List<String> flattenedRequiredDocs = [];
+
+                                  void addFromDocMaps(List<Map<String, dynamic>> docs) {
+                                    for (final doc in docs) {
+                                      final title = (doc['title'] as String).trim();
+                                      if (title.isEmpty) continue;
+                                      final subtitlesRaw = doc['subtitles'];
+                                      final subtitles = subtitlesRaw is List
+                                          ? List<String>.from(
+                                              subtitlesRaw.where((e) => e is String),
+                                            )
+                                          : const <String>[];
+                                      if (subtitles.isEmpty) {
+                                        flattenedRequiredDocs.add(title);
+                                      } else {
+                                        flattenedRequiredDocs.add('$title: ${subtitles.join(', ')}');
+                                      }
+                                    }
+                                  }
+
+                                  addFromDocMaps(generalDocsPayload);
+                                  for (final docs in categoryDocsPayload.values) {
+                                    addFromDocMaps(docs);
+                                  }
 
                                   final entryTypes = <String, Map<String, dynamic>>{
                                     'singleEntry': {
@@ -2558,7 +2877,9 @@ class _VisaPackagesTabState extends State<VisaPackagesTab> {
                                     'visaType': visaTypeController.text,
                                     'validity': validityController.text,
                                     'processingTime': processingTimeController.text,
-                                    'requiredDocuments': documents,
+                                    'requiredDocuments': flattenedRequiredDocs,
+                                    'generalDocuments': generalDocsPayload,
+                                    'categoryDocuments': categoryDocsPayload,
                                     'available': availableController.value,
                                     'discountEnabled': discountEnabledController.value,
                                     'discountPercent': num.tryParse(discountPercentController.text) ?? 0,

@@ -163,7 +163,7 @@ class _WebHomeState extends State<WebHome> {
             onPressed: () => _scrollToSection(_homeKey),
             child: const Text(
               'Home',
-              style: TextStyle(fontSize: 16,color: Colors.white),
+              style: TextStyle(fontSize: 16,color: Colors.white,fontFamily: 'traveltalk'),
             ),
           ),
           const SizedBox(width: 8),
@@ -171,7 +171,7 @@ class _WebHomeState extends State<WebHome> {
             onPressed: () => _scrollToSection(_destinationsKey),
             child: const Text(
               'Destinations',
-              style: TextStyle(fontSize: 16,color: Colors.white),
+              style: TextStyle(fontSize: 16,color: Colors.white,fontFamily: 'traveltalk'),
             ),
           ),
           const SizedBox(width: 8),
@@ -179,7 +179,7 @@ class _WebHomeState extends State<WebHome> {
             onPressed: () => _scrollToSection(_packagesKey),
             child: const Text(
               'Packages',
-              style: TextStyle(fontSize: 16,color: Colors.white),
+              style: TextStyle(fontSize: 16,color: Colors.white,fontFamily: 'traveltalk'),
             ),
           ),
           const SizedBox(width: 8),
@@ -187,7 +187,7 @@ class _WebHomeState extends State<WebHome> {
             onPressed: _navigateToAboutUs,
             child: const Text(
               'About Us',
-              style: TextStyle(fontSize: 16,color: Colors.white),
+              style: TextStyle(fontSize: 16,color: Colors.white,fontFamily: 'traveltalk'),
             ),
           ),
           const SizedBox(width: 8),
