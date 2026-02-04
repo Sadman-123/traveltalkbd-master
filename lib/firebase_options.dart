@@ -41,23 +41,23 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAK7Y8G8ARN7GUzyfGsEaAQgw16XqaA9Nc',
-    appId: '1:754718364327:web:484c276052eca9da830182',
-    messagingSenderId: '754718364327',
-    projectId: 'travel-talk-bd',
-    authDomain: 'travel-talk-bd.firebaseapp.com',
-    databaseURL: 'https://travel-talk-bd-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'travel-talk-bd.firebasestorage.app',
-    measurementId: 'G-Q144RVTKVL',
+    apiKey: "AIzaSyBrLmOEL5DbInhTbMWckYYJK4NFsneseIE",
+  authDomain: "yourtraveltalk-bd.firebaseapp.com",
+  databaseURL: "https://yourtraveltalk-bd-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "yourtraveltalk-bd",
+  storageBucket: "yourtraveltalk-bd.firebasestorage.app",
+  messagingSenderId: "120666230864",
+  appId: "1:120666230864:web:4ffad9df3de93a5cc2c155",
+  measurementId: "G-7FE9CQDBL8"
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAicdURuQGlqChSY8EFUEZyFF9z7MMY95k',
-    appId: '1:754718364327:android:90fce3e3e325417a830182',
-    messagingSenderId: '754718364327',
-    projectId: 'travel-talk-bd',
-    databaseURL: 'https://travel-talk-bd-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'travel-talk-bd.firebasestorage.app',
+    apiKey: 'AIzaSyB6yzE0vK7XcqoQYEYGTfdgrNlqZ2DetpY',
+    appId: '1:120666230864:android:4d3984b37af711a4c2c155',
+    messagingSenderId: '120666230864',
+    projectId: 'yourtraveltalk-bd',
+    databaseURL: 'https://yourtraveltalk-bd-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'yourtraveltalk-bd.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

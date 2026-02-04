@@ -1,27 +1,37 @@
 {
   "project_info": {
-    "project_number": "754718364327",
-    "firebase_url": "https://travel-talk-bd-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "travel-talk-bd",
-    "storage_bucket": "travel-talk-bd.firebasestorage.app"
+    "project_number": "120666230864",
+    "firebase_url": "https://yourtraveltalk-bd-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "yourtraveltalk-bd",
+    "storage_bucket": "yourtraveltalk-bd.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:754718364327:android:90fce3e3e325417a830182",
+        "mobilesdk_app_id": "1:120666230864:android:4d3984b37af711a4c2c155",
         "android_client_info": {
           "package_name": "com.example.traveltalkbd"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "120666230864-i2q2o07gfn7cpchpu7f6j21vdtrjim1d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAicdURuQGlqChSY8EFUEZyFF9z7MMY95k"
+          "current_key": "AIzaSyB6yzE0vK7XcqoQYEYGTfdgrNlqZ2DetpY"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "120666230864-i2q2o07gfn7cpchpu7f6j21vdtrjim1d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

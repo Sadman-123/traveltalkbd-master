@@ -1,25 +1,39 @@
 {
-    "flutter": {
-        "platforms": {
-            "android": {
-                "default": {
-                    "projectId": "travel-talk-bd",
-                    "appId": "1:754718364327:android:90fce3e3e325417a830182",
-                    "fileOutput": "android/app/google-services.json"
-                }
-            },
-            "dart": {
-                "lib/firebase_options.dart": {
-                    "projectId": "travel-talk-bd",
-                    "configurations": {
-                        "android": "1:754718364327:android:90fce3e3e325417a830182",
-                        "ios": "1:754718364327:ios:4fcbf000fd1b0040830182",
-                        "macos": "1:754718364327:ios:4fcbf000fd1b0040830182",
-                        "web": "1:754718364327:web:484c276052eca9da830182",
-                        "windows": "1:754718364327:web:22ee0eac61055a9a830182"
-                    }
-                }
-            }
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "yourtraveltalk-bd",
+          "appId": "1:120666230864:android:4d3984b37af711a4c2c155",
+          "fileOutput": "android/app/google-services.json"
         }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "yourtraveltalk-bd",
+          "configurations": {
+            "android": "1:120666230864:android:4d3984b37af711a4c2c155",
+            "ios": "1:754718364327:ios:4fcbf000fd1b0040830182",
+            "macos": "1:754718364327:ios:4fcbf000fd1b0040830182",
+            "web": "1:120666230864:web:4ffad9df3de93a5cc2c155",
+            "windows": "1:754718364327:web:22ee0eac61055a9a830182"
+          }
+        }
+      }
     }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }
