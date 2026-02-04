@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:traveltalkbd/admin_panel.dart';
 import 'package:traveltalkbd/diy_components/traveltalktheme.dart';
 import 'package:traveltalkbd/services/auth_service.dart';
 
@@ -40,7 +39,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         password: _passwordController.text,
       );
       if (mounted) {
-        Get.off(() => const AdminPanel());
+        // Always navigate via the named /admin route so that refresh
+        // keeps the URL on /admin and `AdminGate` can decide what to show.
+        Get.offAllNamed('/admin');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
