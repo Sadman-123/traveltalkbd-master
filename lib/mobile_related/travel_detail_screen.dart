@@ -580,181 +580,296 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
             'Processing Time',
             visa.processingTime,
           ),
-        const SizedBox(height: 20),
-        // Documents sections
-        if (visa.generalDocuments.isNotEmpty || visa.categoryDocuments.isNotEmpty)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (visa.generalDocuments.isNotEmpty) ...[
-                const Text(
-                  'General Documents',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildGeneralDocumentsBox(visa.generalDocuments),
-                const SizedBox(height: 20),
-              ],
-              if (visa.categoryDocuments.isNotEmpty)
-                _buildCategoryDocumentsBox(visa),
-            ],
-          )
-        else if (visa.requiredDocuments.isNotEmpty) ...[
-          const Text(
-            'Required Documents',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildLegacyDocumentsBox(visa.requiredDocuments),
-        ],
+        const SizedBox(height: 24),
+        _buildVisaRequirementsSection(visa),
       ],
     );
   }
 
-  Widget _buildGeneralDocumentsBox(List<VisaDocumentItem> docs) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: docs.map((doc) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green.shade600,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        doc.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (doc.subtitles.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        ...doc.subtitles.map(
-                          (s) => Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              '• $s',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
+  Widget _buildVisaRequirementsSection(VisaPackage visa) {
+    final hasStructured = visa.generalDocuments.isNotEmpty || visa.categoryDocuments.isNotEmpty;
+    final legacyDocs = !hasStructured ? visa.requiredDocuments : const <String>[];
 
-  Widget _buildCategoryDocumentsBox(VisaPackage visa) {
-    const categoryLabels = <String, String>{
-      'businessPerson': 'Business person',
-      'student': 'Student',
-      'jobHolder': 'Job holder',
-    };
-    final categoriesOrder = categoryLabels.keys.toList();
-    if (!categoriesOrder.contains(_selectedVisaCategory)) {
-      _selectedVisaCategory = categoriesOrder.first;
+    if (!hasStructured && legacyDocs.isEmpty) {
+      return const SizedBox.shrink();
     }
-    final selectedDocs = visa.categoryDocuments[_selectedVisaCategory] ?? const <VisaDocumentItem>[];
-    final otherDocs = visa.categoryDocuments['other'] ?? const <VisaDocumentItem>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Documents by visa category',
+          'Visa Requirements',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(16),
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
           decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.teal.withOpacity(0.25),
+              width: 1.5,
+            ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Toggle-like buttons
-              Wrap(
-                spacing: 8,
-                children: categoriesOrder.map((key) {
-                  final label = categoryLabels[key]!;
-                  final selected = _selectedVisaCategory == key;
-                  return ChoiceChip(
-                    label: Text(label),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() {
-                        _selectedVisaCategory = key;
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              if (selectedDocs.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'No documents found for this category',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
+              _buildSectionPill('General Documents'),
+              const SizedBox(height: 14),
+              if (hasStructured && visa.generalDocuments.isNotEmpty)
+                _buildGeneralDocumentsList(visa.generalDocuments)
+              else if (legacyDocs.isNotEmpty)
+                _buildLegacyDocumentsBox(legacyDocs),
+              const SizedBox(height: 18),
+              _buildDividerPill('Documents by Visa Category'),
+              const SizedBox(height: 14),
+              if (hasStructured && visa.categoryDocuments.isNotEmpty)
+                _buildCategoryDocumentsBoxNew(visa)
               else
-                _buildGeneralDocumentsBox(selectedDocs),
-              if (otherDocs.isNotEmpty) ...[
-                const SizedBox(height: 16),
                 const Text(
-                  'Other documents (if applicable)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'No category specific documents available',
+                  style: TextStyle(color: Colors.grey),
                 ),
-                const SizedBox(height: 8),
-                _buildGeneralDocumentsBox(otherDocs),
-              ],
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildSectionPill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: Traveltalktheme.primaryGradient,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDividerPill(String text) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Divider(
+          color: Colors.grey.shade300,
+          thickness: 1,
+        ),
+        _buildSectionPill(text),
+      ],
+    );
+  }
+
+  Widget _buildGeneralDocumentsList(List<VisaDocumentItem> docs) {
+    return Column(
+      children: docs.asMap().entries.map((entry) {
+        final index = entry.key;
+        final doc = entry.value;
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.description_outlined,
+                color: Colors.teal.shade600,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${index + 1}. ${doc.title}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (doc.subtitles.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      ...doc.subtitles.map(
+                        (s) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            '• $s',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCategoryDocumentsBoxNew(VisaPackage visa) {
+    const categoryLabels = <String, String>{
+      'jobHolder': 'For Job Holder',
+      'businessPerson': 'For Business Person',
+      'student': 'For Student',
+      'other': 'Other Documents',
+    };
+    final categoriesOrder = categoryLabels.keys.toList();
+    if (!categoriesOrder.contains(_selectedVisaCategory)) {
+      _selectedVisaCategory = categoriesOrder.first;
+    }
+
+    final docs = visa.categoryDocuments[_selectedVisaCategory] ?? const <VisaDocumentItem>[];
+    final currentLabel = categoryLabels[_selectedVisaCategory] ?? 'Documents';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: categoriesOrder.map((key) {
+            final selected = _selectedVisaCategory == key;
+            final label = categoryLabels[key]!;
+            final Color bg = selected ? Colors.orange : Colors.white;
+            final Color fg = selected ? Colors.white : Colors.grey.shade800;
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedVisaCategory = key;
+                });
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected ? Colors.orange : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: fg,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 14),
+        if (docs.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'No documents found for this category',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.folder_special_rounded,
+                      color: Colors.orange.shade700,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        currentLabel,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...docs.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final doc = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${idx + 1}. ${doc.title}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (doc.subtitles.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          ...doc.subtitles.map(
+                            (s) => Padding(
+                              padding: const EdgeInsets.only(left: 16, bottom: 2),
+                              child: Text(
+                                '• $s',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
       ],
     );
   }
