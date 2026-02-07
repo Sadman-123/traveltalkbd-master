@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 class CloudinaryService {
-  static const String cloudName = 'dij3dbigb';
-  static const String apiKey = '936738143817196';
-  static const String apiSecret = 'ydi0olXiBpee7vbHkj-TVQIz1cY';
+  static const String cloudName = 'drs8bfglw';
+  static const String apiKey = '738374529618539';
+  static const String apiSecret = '2utDV-H4_j0AvmKn7qwNTltBTzM';
 
   /// Generate signature for Cloudinary API
   /// According to Cloudinary docs, exclude: file, cloud_name, resource_type, api_key
